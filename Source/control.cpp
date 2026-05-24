@@ -525,7 +525,7 @@ std::string TextCmdLevelSeed(const string_view parameter)
 	    "\n",
 	    gameId, " ", mode, "\n",
 	    questPool, " quests: ", questFlags, "\n",
-	    "Storybook: ", glSeedTbl[16]);
+	    "Storybook: ", glSeedTbl[7]);
 }
 
 std::vector<TextCmdItem> TextCmdList = {

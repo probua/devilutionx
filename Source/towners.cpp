@@ -304,7 +304,7 @@ void TalkToBarOwner(Player &player, Towner &barOwner)
 
 	auto &kingQuest = Quests[Q_SKELKING];
 	if (kingQuest._qactive != QUEST_NOTAVAIL) {
-		if (player._pLvlVisited[2] || player._pLvlVisited[4]) {
+		if (player._pLvlVisited[kingQuest._qlevel]) {
 			if (kingQuest._qvar2 == 0) {
 				kingQuest._qvar2 = 1;
 				kingQuest._qlog = true;
@@ -400,7 +400,7 @@ void TalkToBlackSmith(Player &player, Towner &blackSmith)
 		}
 	}
 	if (IsNoneOf(Quests[Q_ANVIL]._qactive, QUEST_NOTAVAIL, QUEST_DONE)) {
-		if ((player._pLvlVisited[9] || player._pLvlVisited[10]) && Quests[Q_ANVIL]._qvar2 == 0) {
+		if (player._pLvlVisited[Quests[Q_ANVIL]._qlevel] && Quests[Q_ANVIL]._qvar2 == 0) {
 			Quests[Q_ANVIL]._qvar2 = 1;
 			Quests[Q_ANVIL]._qlog = true;
 			if (Quests[Q_ANVIL]._qactive == QUEST_INIT) {
@@ -499,7 +499,7 @@ void TalkToHealer(Player &player, Towner &healer)
 {
 	Quest &poisonWater = Quests[Q_PWATER];
 	if (poisonWater._qactive != QUEST_NOTAVAIL) {
-		if ((poisonWater._qactive == QUEST_INIT && (player._pLvlVisited[1] || player._pLvlVisited[5])) || (poisonWater._qactive == QUEST_ACTIVE && !poisonWater._qlog)) {
+		if ((poisonWater._qactive == QUEST_INIT && player._pLvlVisited[poisonWater._qlevel - 1]) || (poisonWater._qactive == QUEST_ACTIVE && !poisonWater._qlog)) {
 			// Play the dialog and make the quest visible in the log if the player has not started the quest but has
 			// visited the dungeon at least once, or if they've found the poison water cave before speaking to Pepin
 			poisonWater._qactive = QUEST_ACTIVE;

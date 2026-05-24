@@ -1484,7 +1484,7 @@ void AddPedestalOfBlood(Object &pedestalOfBlood)
 
 void AddStoryBook(Object &storyBook)
 {
-	SetRndSeed(glSeedTbl[16]);
+	SetRndSeed(glSeedTbl[7]);
 
 	storyBook._oVar1 = GenerateRnd(3);
 	if (currlevel == 4)
