@@ -411,11 +411,7 @@ int ItemsGetCurrlevel()
 			qlevel = 1;
 			break;
 		}
-		// Map quest level to original range for item generation
-		static constexpr int LevelMap[] = { 0, 1, 3, 5, 7, 9, 13, 16 };
-		if (qlevel >= 1 && qlevel <= 7)
-			return LevelMap[qlevel];
-		return qlevel;
+		return GetVirtualLevelForShop(qlevel);
 	}
 
 	if (leveltype == DTYPE_NEST)
@@ -424,14 +420,7 @@ int ItemsGetCurrlevel()
 	if (leveltype == DTYPE_CRYPT)
 		return currlevel - 7;
 
-	// Mod: map 7-level dungeon to original 16-level range for item generation
-	// 1→1 (Cathedral early), 2→3 (Cathedral late), 3→5 (Catacombs early),
-	// 4→7 (Catacombs late), 5→9 (Caves), 6→13 (Hell early), 7→16 (Hell late)
-	static constexpr int LevelMap[] = { 0, 1, 3, 5, 7, 9, 13, 16 };
-	if (currlevel >= 1 && currlevel <= 7)
-		return LevelMap[currlevel];
-
-	return currlevel;
+	return GetVirtualLevel();
 }
 
 bool ItemPlace(Point position)

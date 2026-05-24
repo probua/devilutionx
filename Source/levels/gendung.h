@@ -176,6 +176,22 @@ extern WorldTilePosition dmaxPosition;
 extern DVL_API_FOR_TEST dungeon_type leveltype;
 /** Specifies the active dungeon level of the current game. */
 extern DVL_API_FOR_TEST uint8_t currlevel;
+
+inline int GetVirtualLevel()
+{
+	static constexpr int VirtualLevelMap[] = { 0, 1, 3, 5, 7, 9, 13, 16 };
+	if (currlevel >= 1 && currlevel <= 7)
+		return VirtualLevelMap[currlevel];
+	return currlevel;
+}
+
+inline int GetVirtualLevelForShop(int level)
+{
+	static constexpr int VirtualLevelMap[] = { 0, 1, 3, 5, 7, 9, 13, 16 };
+	if (level >= 1 && level <= 7)
+		return VirtualLevelMap[level];
+	return level;
+}
 extern bool setlevel;
 /** Specifies the active quest level of the current game. */
 extern _setlevels setlvlnum;

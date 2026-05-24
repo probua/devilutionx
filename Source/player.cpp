@@ -1127,7 +1127,7 @@ void TryDisarm(const Player &player, Object &object)
 	if (!object._oTrapFlag) {
 		return;
 	}
-	int trapdisper = 2 * player._pDexterity - 5 * currlevel;
+	int trapdisper = 2 * player._pDexterity - 5 * GetVirtualLevel();
 	if (GenerateRnd(100) > trapdisper) {
 		return;
 	}
@@ -3461,16 +3461,16 @@ void PlayDungMsgs()
 	if (!setlevel && currlevel == 1 && !myPlayer._pLvlVisited[1] && (myPlayer.pDungMsgs & DungMsgCathedral) == 0) {
 		myPlayer.Say(HeroSpeech::TheSanctityOfThisPlaceHasBeenFouled, 40);
 		myPlayer.pDungMsgs = myPlayer.pDungMsgs | DungMsgCathedral;
-	} else if (!setlevel && currlevel == 5 && !myPlayer._pLvlVisited[5] && (myPlayer.pDungMsgs & DungMsgCatacombs) == 0) {
+	} else if (!setlevel && currlevel == 3 && !myPlayer._pLvlVisited[3] && (myPlayer.pDungMsgs & DungMsgCatacombs) == 0) {
 		myPlayer.Say(HeroSpeech::TheSmellOfDeathSurroundsMe, 40);
 		myPlayer.pDungMsgs |= DungMsgCatacombs;
-	} else if (!setlevel && currlevel == 9 && !myPlayer._pLvlVisited[9] && (myPlayer.pDungMsgs & DungMsgCaves) == 0) {
+	} else if (!setlevel && currlevel == 5 && !myPlayer._pLvlVisited[5] && (myPlayer.pDungMsgs & DungMsgCaves) == 0) {
 		myPlayer.Say(HeroSpeech::ItsHotDownHere, 40);
 		myPlayer.pDungMsgs |= DungMsgCaves;
-	} else if (!setlevel && currlevel == 13 && !myPlayer._pLvlVisited[13] && (myPlayer.pDungMsgs & DungMsgHell) == 0) {
+	} else if (!setlevel && currlevel == 6 && !myPlayer._pLvlVisited[6] && (myPlayer.pDungMsgs & DungMsgHell) == 0) {
 		myPlayer.Say(HeroSpeech::IMustBeGettingClose, 40);
 		myPlayer.pDungMsgs |= DungMsgHell;
-	} else if (!setlevel && currlevel == 16 && !myPlayer._pLvlVisited[16] && (myPlayer.pDungMsgs & DungMsgDiablo) == 0) {
+	} else if (!setlevel && currlevel == 7 && !myPlayer._pLvlVisited[7] && (myPlayer.pDungMsgs & DungMsgDiablo) == 0) {
 		sfxdelay = 40;
 		sfxdnum = PS_DIABLVLINT;
 		myPlayer.pDungMsgs |= DungMsgDiablo;

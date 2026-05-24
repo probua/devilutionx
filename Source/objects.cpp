@@ -2938,7 +2938,7 @@ void OperateShrineOily(Player &player, Point spawnPosition)
 	    MissileID::FireWall,
 	    TARGET_PLAYERS,
 	    -1,
-	    2 * currlevel + 2,
+	    2 * GetVirtualLevel() + 2,
 	    0);
 
 	InitDiabloMsg(EMSG_SHRINE_OILY);
@@ -2988,7 +2988,7 @@ void OperateShrineSparkling(Player &player, Point spawnPosition)
 	if (&player != MyPlayer)
 		return;
 
-	AddPlrExperience(player, player._pLevel, 1000 * currlevel);
+	AddPlrExperience(player, player._pLevel, 1000 * GetVirtualLevel());
 
 	AddMissile(
 	    spawnPosition,
@@ -2997,7 +2997,7 @@ void OperateShrineSparkling(Player &player, Point spawnPosition)
 	    MissileID::FlashBottom,
 	    TARGET_PLAYERS,
 	    -1,
-	    3 * currlevel + 2,
+	    3 * GetVirtualLevel() + 2,
 	    0);
 
 	RedrawEverything();

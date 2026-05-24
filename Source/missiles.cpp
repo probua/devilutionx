@@ -198,7 +198,7 @@ int ProjectileMonsterDamage(Missile &missile)
 
 int ProjectileTrapDamage(Missile &missile)
 {
-	return currlevel + GenerateRnd(2 * currlevel);
+	return GetVirtualLevel() + GenerateRnd(2 * GetVirtualLevel());
 }
 
 bool MonsterMHit(int pnum, int monsterId, int mindam, int maxdam, int dist, MissileID t, DamageType damageType, bool shift)
@@ -1019,11 +1019,9 @@ bool PlayerMHit(int pnum, Monster *monster, int dist, int mind, int maxd, Missil
 	}
 
 	int minhit = 10;
-	if (currlevel == 14)
+	if (currlevel == 6)
 		minhit = 20;
-	if (currlevel == 15)
-		minhit = 25;
-	if (currlevel == 16)
+	if (currlevel == 7)
 		minhit = 30;
 	hper = std::max(hper, minhit);
 
@@ -1882,7 +1880,7 @@ void AddNovaBall(Missile &missile, AddMissileParameter &parameter)
 void AddFireWall(Missile &missile, AddMissileParameter &parameter)
 {
 	missile._midam = GenerateRndSum(10, 2) + 2;
-	missile._midam += missile._misource >= 0 ? Players[missile._misource]._pLevel : currlevel; // BUGFIX: missing parenthesis around ternary (fixed)
+	missile._midam += missile._misource >= 0 ? Players[missile._misource]._pLevel : GetVirtualLevel(); // BUGFIX: missing parenthesis around ternary (fixed)
 	missile._midam <<= 3;
 	UpdateMissileVelocity(missile, parameter.dst, 16);
 	int i = missile._mispllvl;
@@ -1890,7 +1888,7 @@ void AddFireWall(Missile &missile, AddMissileParameter &parameter)
 	if (i > 0)
 		missile._mirange *= i + 1;
 	if (missile._micaster == TARGET_PLAYERS || missile._misource < 0)
-		missile._mirange += currlevel;
+		missile._mirange += GetVirtualLevel();
 	missile._mirange *= 16;
 	missile.var1 = missile._mirange - missile._miAnimLen;
 }
@@ -2052,11 +2050,11 @@ void AddFlashBottom(Missile &missile, AddMissileParameter & /*parameter*/)
 		missile._midam = missile.sourceMonster()->level(sgGameInitInfo.nDifficulty) * 2;
 		break;
 	case MissileSource::Trap:
-		missile._midam = currlevel / 2;
+		missile._midam = GetVirtualLevel() / 2;
 		break;
 	}
 
-	missile._mirange = 19;
+	missile._midam = std::max(missile._midam, 1);
 }
 
 void AddFlashTop(Missile &missile, AddMissileParameter & /*parameter*/)
@@ -2068,7 +2066,7 @@ void AddFlashTop(Missile &missile, AddMissileParameter & /*parameter*/)
 			missile._midam = ScaleSpellEffect(dmg, missile._mispllvl);
 			missile._midam += missile._midam / 2;
 		} else {
-			missile._midam = currlevel / 2;
+			missile._midam = GetVirtualLevel() / 2;
 		}
 	}
 	missile._miPreFlag = true;
@@ -2489,7 +2487,7 @@ void AddNova(Missile &missile, AddMissileParameter &parameter)
 		int dmg = GenerateRndSum(6, 5) + player._pLevel + 5;
 		missile._midam = ScaleSpellEffect(dmg / 2, missile._mispllvl);
 	} else {
-		missile._midam = (currlevel / 2) + GenerateRndSum(3, 3);
+		missile._midam = (GetVirtualLevel() / 2) + GenerateRndSum(3, 3);
 	}
 
 	missile._mirange = 1;
@@ -2793,8 +2791,8 @@ void ProcessElementalArrow(Missile &missile)
 				maxd = monster.maxDamage;
 			}
 		} else {
-			mind = GenerateRnd(10) + 1 + currlevel;
-			maxd = GenerateRnd(10) + 1 + currlevel * 2;
+			mind = GenerateRnd(10) + 1 + GetVirtualLevel();
+			maxd = GenerateRnd(10) + 1 + GetVirtualLevel() * 2;
 		}
 		MoveMissileAndCheckMissileCol(missile, DamageType::Physical, mind, maxd, true, false);
 		if (missile._mirange == 0) {
@@ -2814,8 +2812,8 @@ void ProcessElementalArrow(Missile &missile)
 					eMind = player._pILMinDam;
 					eMaxd = player._pILMaxDam;
 				} else {
-					eMind = GenerateRnd(10) + 1 + currlevel;
-					eMaxd = GenerateRnd(10) + 1 + currlevel * 2;
+					eMind = GenerateRnd(10) + 1 + GetVirtualLevel();
+					eMaxd = GenerateRnd(10) + 1 + GetVirtualLevel() * 2;
 				}
 				eAnim = MissileGraphicID::ChargedBolt;
 				damageType = DamageType::Lightning;
@@ -2827,8 +2825,8 @@ void ProcessElementalArrow(Missile &missile)
 					eMind = player._pIFMinDam;
 					eMaxd = player._pIFMaxDam;
 				} else {
-					eMind = GenerateRnd(10) + 1 + currlevel;
-					eMaxd = GenerateRnd(10) + 1 + currlevel * 2;
+					eMind = GenerateRnd(10) + 1 + GetVirtualLevel();
+					eMaxd = GenerateRnd(10) + 1 + GetVirtualLevel() * 2;
 				}
 				eAnim = MissileGraphicID::MagmaBallExplosion;
 				damageType = DamageType::Fire;
@@ -2875,8 +2873,8 @@ void ProcessArrow(Missile &missile)
 		maxd = monster.maxDamage;
 	} break;
 	case MissileSource::Trap:
-		mind = currlevel;
-		maxd = 2 * currlevel;
+		mind = GetVirtualLevel();
+		maxd = 2 * GetVirtualLevel();
 		break;
 	}
 	MoveMissileAndCheckMissileCol(missile, GetMissileData(missile._mitype).damageType(), mind, maxd, true, false);
@@ -3307,7 +3305,7 @@ void ProcessLightningControl(Missile &missile)
 	int dam;
 	if (missile.IsTrap()) {
 		// BUGFIX: damage of missile should be encoded in missile struct; monster can be dead before missile arrives.
-		dam = GenerateRnd(currlevel) + 2 * currlevel;
+		dam = GenerateRnd(GetVirtualLevel()) + 2 * GetVirtualLevel();
 	} else if (missile._micaster == TARGET_MONSTERS) {
 		// BUGFIX: damage of missile should be encoded in missile struct; player can be dead/have left the game before missile arrives.
 		dam = (GenerateRnd(2) + GenerateRnd(Players[missile._misource]._pLevel) + 2) << 6;

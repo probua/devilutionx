@@ -2192,7 +2192,9 @@ void SetupTownStores()
 		SetRndSeed(glSeedTbl[currlevel] * SDL_GetTicks());
 	}
 
-	l = clamp(l + 2, 6, 16);
+	l = clamp(l + 1, 1, 7);
+	l = GetVirtualLevelForShop(l);
+	l = clamp(l, 6, 16);
 	SpawnSmith(l);
 	SpawnWitch(l);
 	SpawnHealer(l);
