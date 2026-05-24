@@ -3223,7 +3223,7 @@ void InitLevelMonsters()
 void GetLevelMTypes()
 {
 	AddMonsterType(MT_GOLEM, PLACE_SPECIAL);
-	if (currlevel == 16) {
+	if (currlevel == 7) {
 		AddMonsterType(MT_ADVOCATE, PLACE_SCATTER);
 		AddMonsterType(MT_RBLACK, PLACE_SCATTER);
 		AddMonsterType(MT_DIABLO, PLACE_SPECIAL);
@@ -3472,11 +3472,11 @@ void InitGolems()
 
 void InitMonsters()
 {
-	if (!gbIsSpawn && !setlevel && currlevel == 16)
+	if (!gbIsSpawn && !setlevel && currlevel == 7)
 		LoadDiabMonsts();
 
 	int nt = numtrigs;
-	if (currlevel == 15)
+	if (currlevel == 6)
 		nt = 1;
 	for (int i = 0; i < nt; i++) {
 		for (int s = -2; s < 2; s++) {
