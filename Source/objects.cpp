@@ -1487,13 +1487,19 @@ void AddStoryBook(Object &storyBook)
 	SetRndSeed(glSeedTbl[7]);
 
 	storyBook._oVar1 = GenerateRnd(3);
-	if (currlevel == 4)
-		storyBook._oVar2 = StoryText[storyBook._oVar1][0];
-	else if (currlevel == 8)
-		storyBook._oVar2 = StoryText[storyBook._oVar1][1];
-	else if (currlevel == 12)
-		storyBook._oVar2 = StoryText[storyBook._oVar1][2];
-	storyBook._oVar3 = (currlevel / 4) + 3 * storyBook._oVar1 - 1;
+	// Original: levels 4,8,12 mapped to story sets 0,1,2
+	// Mod: levels 2,4,6 are last floor of Cathedral,Catacombs,Hell
+	int storySet;
+	if (currlevel == 2)
+		storySet = 0;
+	else if (currlevel == 4)
+		storySet = 1;
+	else if (currlevel == 6)
+		storySet = 2;
+	else
+		storySet = 0;
+	storyBook._oVar2 = StoryText[storyBook._oVar1][storySet];
+	storyBook._oVar3 = storySet + 3 * storyBook._oVar1;
 	storyBook._oAnimFrame = 5 - 2 * storyBook._oVar1;
 	storyBook._oVar4 = storyBook._oAnimFrame + 1;
 }
@@ -1906,7 +1912,7 @@ void UpdateLeverState(Object &object)
 	object._oSelFlag = 0;
 	object._oAnimFrame++;
 
-	if (currlevel == 16 && !AreAllLeversActivated(object._oVar8))
+	if (currlevel == 7 && !AreAllLeversActivated(object._oVar8))
 		return;
 
 	if (currlevel == 24) {
@@ -3634,7 +3640,7 @@ void SyncLever(const Object &lever)
 	if (lever._oSelFlag != 0)
 		return;
 
-	if (currlevel == 16 && !AreAllLeversActivated(lever._oVar8))
+	if (currlevel == 7 && !AreAllLeversActivated(lever._oVar8))
 		return;
 
 	ObjChangeMap(lever._oVar1, lever._oVar2, lever._oVar3, lever._oVar4);
@@ -3909,16 +3915,16 @@ void InitObjects()
 {
 	ClrAllObjects();
 	NaKrulTomeSequence = 0;
-	if (currlevel == 16) {
+	if (currlevel == 7) {
 		AddDiabObjs();
 	} else {
 		DiscardRandomValues(1);
-		if (currlevel == 9 && !UseMultiplayerQuests())
+		if (currlevel == 5 && !UseMultiplayerQuests())
 			AddSlainHero();
 		if (Quests[Q_MUSHROOM].IsAvailable())
 			AddMushPatch();
 
-		if (currlevel == 4 || currlevel == 8 || currlevel == 12)
+		if (currlevel == 2 || currlevel == 4 || currlevel == 6)
 			AddStoryBooks();
 		if (currlevel == 21) {
 			AddCryptStoryBook(1);
