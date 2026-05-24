@@ -114,19 +114,19 @@ void InitTownTriggers()
 	if (IsWarpOpen(DTYPE_CATACOMBS)) {
 		trigs[numtrigs].position = { 49, 21 };
 		trigs[numtrigs]._tmsg = WM_DIABTOWNWARP;
-		trigs[numtrigs]._tlvl = 5;
+		trigs[numtrigs]._tlvl = 3;
 		numtrigs++;
 	}
 	if (IsWarpOpen(DTYPE_CAVES)) {
 		trigs[numtrigs].position = { 17, 69 };
 		trigs[numtrigs]._tmsg = WM_DIABTOWNWARP;
-		trigs[numtrigs]._tlvl = 9;
+		trigs[numtrigs]._tlvl = 5;
 		numtrigs++;
 	}
 	if (IsWarpOpen(DTYPE_HELL)) {
 		trigs[numtrigs].position = { 41, 80 };
 		trigs[numtrigs]._tmsg = WM_DIABTOWNWARP;
-		trigs[numtrigs]._tlvl = 13;
+		trigs[numtrigs]._tlvl = 6;
 		numtrigs++;
 	}
 	if (IsWarpOpen(DTYPE_NEST)) {
@@ -467,7 +467,7 @@ bool ForceL2Trig()
 		}
 	}
 
-	if (currlevel == 5) {
+	if (currlevel == 3) {
 		for (const uint16_t tileId : L2TWarpUpList) {
 			if (dPiece[cursPosition.x][cursPosition.y] == tileId) {
 				for (int j = 0; j < numtrigs; j++) {
@@ -519,7 +519,7 @@ bool ForceL3Trig()
 		}
 	}
 
-	if (currlevel == 9) {
+	if (currlevel == 5) {
 		for (const uint16_t tileId : L3TWarpUpList) {
 			if (dPiece[cursPosition.x][cursPosition.y] == tileId) {
 				for (int j = 0; j < numtrigs; j++) {
@@ -566,7 +566,7 @@ bool ForceL4Trig()
 		}
 	}
 
-	if (currlevel == 13) {
+	if (currlevel == 6) {
 		for (const uint16_t tileId : L4TWarpUpList) {
 			if (dPiece[cursPosition.x][cursPosition.y] == tileId) {
 				for (int j = 0; j < numtrigs; j++) {
@@ -584,7 +584,7 @@ bool ForceL4Trig()
 		}
 	}
 
-	if (currlevel == 15) {
+	if (currlevel == 6) {
 		for (const uint16_t tileId : L4PentaList) {
 			if (dPiece[cursPosition.x][cursPosition.y] == tileId) {
 				InfoString = _("Down to Diablo");
@@ -891,19 +891,19 @@ void CheckTriggers()
 				diablo_message abortflag;
 
 				auto position = myPlayer.position.tile;
-				if (trigs[i]._tlvl == 5 && myPlayer._pLevel < 8) {
+				if (trigs[i]._tlvl == 3 && myPlayer._pLevel < 8) {
 					abort = true;
 					position.y += 1;
 					abortflag = EMSG_REQUIRES_LVL_8;
 				}
 
-				if (IsAnyOf(trigs[i]._tlvl, 9, 17) && myPlayer._pLevel < 13) {
+				if (trigs[i]._tlvl == 5 && myPlayer._pLevel < 13) {
 					abort = true;
 					position.x += 1;
 					abortflag = EMSG_REQUIRES_LVL_13;
 				}
 
-				if (IsAnyOf(trigs[i]._tlvl, 13, 21) && myPlayer._pLevel < 17) {
+				if (trigs[i]._tlvl == 6 && myPlayer._pLevel < 17) {
 					abort = true;
 					position.y += 1;
 					abortflag = EMSG_REQUIRES_LVL_17;

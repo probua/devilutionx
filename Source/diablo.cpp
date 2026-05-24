@@ -2391,7 +2391,7 @@ bool StartGame(bool bNewGame, bool bSinglePlayer)
 			InitDungMsgs(*MyPlayer);
 			DeltaSyncJunk();
 		}
-		giNumberOfLevels = gbIsHellfire ? 25 : 17;
+		giNumberOfLevels = gbIsHellfire ? 25 : 8;
 		interface_mode uMsg = WM_DIABNEWGAME;
 		if (gbValidSaveFile && gbLoadGame) {
 			uMsg = WM_DIABLOADGAME;

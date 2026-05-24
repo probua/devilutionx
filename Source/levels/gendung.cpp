@@ -367,13 +367,13 @@ dungeon_type GetLevelType(int level)
 {
 	if (level == 0)
 		return DTYPE_TOWN;
-	if (level <= 4)
+	if (level <= 2)
 		return DTYPE_CATHEDRAL;
-	if (level <= 8)
+	if (level <= 4)
 		return DTYPE_CATACOMBS;
-	if (level <= 12)
+	if (level <= 5)
 		return DTYPE_CAVES;
-	if (level <= 16)
+	if (level <= 7)
 		return DTYPE_HELL;
 	if (level <= 20)
 		return DTYPE_NEST;

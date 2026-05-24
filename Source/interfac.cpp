@@ -86,7 +86,7 @@ Cutscenes PickCutscene(interface_mode uMsg)
 		int lvl = MyPlayer->plrlevel;
 		if (lvl == 1 && uMsg == WM_DIABNEXTLVL)
 			return CutTown;
-		if (lvl == 16 && uMsg == WM_DIABNEXTLVL)
+		if (lvl == 7 && uMsg == WM_DIABNEXTLVL)
 			return CutGate;
 		return GetCutSceneFromLevelType(GetLevelType(lvl));
 	}
@@ -503,7 +503,7 @@ void ShowProgress(interface_mode uMsg)
 	NetSendCmdLocParam2(true, CMD_PLAYER_JOINLEVEL, myPlayer.position.tile, myPlayer.plrlevel, myPlayer.plrIsOnSetLevel ? 1 : 0);
 	plrmsg_delay(false);
 
-	if (gbSomebodyWonGameKludge && myPlayer.isOnLevel(16)) {
+	if (gbSomebodyWonGameKludge && myPlayer.isOnLevel(7)) {
 		PrepDoEnding();
 	}
 
