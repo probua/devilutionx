@@ -1948,7 +1948,7 @@ bool PlaceCaveStairs(lvl_entry entry)
 		ViewPosition = position->megaToWorld() + Displacement { 3, 1 };
 
 	// Place town warp stairs
-	if (currlevel == 9) {
+	if (currlevel == 5) {
 		position = PlaceMiniSet(L3HOLDWARP);
 		if (!position)
 			return false;

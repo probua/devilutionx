@@ -2429,19 +2429,15 @@ bool CreateDungeon()
 	std::optional<WorldTileSize> size;
 
 	switch (currlevel) {
-	case 5:
+	case 3:
 		if (Quests[Q_BLOOD]._qactive != QUEST_NOTAVAIL)
 			size = { 14, 20 };
 		break;
-	case 6:
-		if (Quests[Q_SCHAMB]._qactive != QUEST_NOTAVAIL)
-			size = { 10, 10 };
-		break;
-	case 7:
+	case 4:
 		if (Quests[Q_BLIND]._qactive != QUEST_NOTAVAIL)
 			size = { 15, 15 };
-		break;
-	case 8:
+		if (Quests[Q_SCHAMB]._qactive != QUEST_NOTAVAIL)
+			size = { 10, 10 };
 		break;
 	}
 
@@ -2647,7 +2643,7 @@ bool PlaceStairs(lvl_entry entry)
 		ViewPosition = position->megaToWorld() + Displacement { 4, 6 };
 
 	// Place town warp stairs
-	if (currlevel == 5) {
+	if (currlevel == 3) {
 		position = PlaceMiniSet(WARPSTAIRS);
 		if (!position)
 			return false;

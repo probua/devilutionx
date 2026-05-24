@@ -837,7 +837,7 @@ void InitThemes()
 	treasureFlag = true;
 	weaponFlag = true;
 
-	if (currlevel == 16 || IsAnyOf(leveltype, DTYPE_NEST, DTYPE_CRYPT)) {
+	if (currlevel == 7 || IsAnyOf(leveltype, DTYPE_NEST, DTYPE_CRYPT)) {
 		return;
 	}
 
@@ -888,7 +888,7 @@ void InitThemes()
 
 void HoldThemeRooms()
 {
-	if (currlevel == 16 || IsAnyOf(leveltype, DTYPE_NEST, DTYPE_CRYPT)) {
+	if (currlevel == 7 || IsAnyOf(leveltype, DTYPE_NEST, DTYPE_CRYPT)) {
 		return;
 	}
 
@@ -911,7 +911,7 @@ void HoldThemeRooms()
 
 void CreateThemeRooms()
 {
-	if (currlevel == 16 || IsAnyOf(leveltype, DTYPE_NEST, DTYPE_CRYPT)) {
+	if (currlevel == 7 || IsAnyOf(leveltype, DTYPE_NEST, DTYPE_CRYPT)) {
 		return;
 	}
 

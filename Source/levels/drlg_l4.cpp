@@ -162,7 +162,7 @@ void LoadQuestSetPieces()
 {
 	if (Quests[Q_WARLORD].IsAvailable()) {
 		pSetPiece = LoadFileInMem<uint16_t>("levels\\l4data\\warlord.dun");
-	} else if (currlevel == 15 && UseMultiplayerQuests()) {
+	} else if (currlevel == 6 && UseMultiplayerQuests()) {
 		pSetPiece = LoadFileInMem<uint16_t>("levels\\l4data\\vile1.dun");
 	}
 }
@@ -251,7 +251,7 @@ void GenerateRoom(WorldTileRectangle area, bool verticalLayout)
 void FirstRoom()
 {
 	WorldTileRectangle room { { 0, 0 }, { 14, 14 } };
-	if (currlevel != 16) {
+	if (currlevel != 7) {
 		if (currlevel == Quests[Q_WARLORD]._qlevel && Quests[Q_WARLORD]._qactive != QUEST_NOTAVAIL) {
 			room.size = { 11, 11 };
 		} else if (currlevel == Quests[Q_BETRAYER]._qlevel && UseMultiplayerQuests()) {
@@ -271,7 +271,7 @@ void FirstRoom()
 	const int32_t randomY = GenerateRnd(ymax - ymin + 1) + ymin;
 	room.position = WorldTilePosition(randomX, randomY);
 
-	if (currlevel == 16) {
+	if (currlevel == 7) {
 		L4Hold = room.position;
 	}
 	if (Quests[Q_WARLORD].IsAvailable() || (currlevel == Quests[Q_BETRAYER]._qlevel && UseMultiplayerQuests())) {
@@ -1092,37 +1092,32 @@ bool PlaceStairs(lvl_entry entry)
 	if (entry == ENTRY_MAIN)
 		ViewPosition = position->megaToWorld() + Displacement { 6, 6 };
 
-	if (currlevel != 15) {
-		// Place stairs down
-		if (currlevel != 16) {
-			if (Quests[Q_WARLORD].IsAvailable()) {
-				if (entry == ENTRY_PREV)
-					ViewPosition = SetPiece.position.megaToWorld() + Displacement { 7, 7 };
-			} else {
-				position = PlaceMiniSet(L4DSTAIRS);
-				if (!position)
-					return false;
-				if (entry == ENTRY_PREV)
-					ViewPosition = position->megaToWorld() + Displacement { 7, 5 };
-			}
-		}
-
-		// Place town warp stairs
-		if (currlevel == 13) {
-			position = PlaceMiniSet(L4TWARP);
-			if (!position)
-				return false;
-			if (entry == ENTRY_TWARPDN)
-				ViewPosition = position->megaToWorld() + Displacement { 6, 6 };
-		}
-	} else {
-		// Place hell gate
+	if (currlevel == 6) {
+		// Place hell gate (Lazarus)
 		position = PlaceMiniSet(L4PENTA2);
 		if (!position)
 			return false;
 		Quests[Q_DIABLO].position = *position;
 		if (entry == ENTRY_PREV)
 			ViewPosition = position->megaToWorld() + Displacement { 6, 5 };
+
+		// Place town warp stairs on first Hell level
+		position = PlaceMiniSet(L4TWARP);
+		if (!position)
+			return false;
+		if (entry == ENTRY_TWARPDN)
+			ViewPosition = position->megaToWorld() + Displacement { 6, 6 };
+	} else if (currlevel != 7) {
+		if (Quests[Q_WARLORD].IsAvailable()) {
+			if (entry == ENTRY_PREV)
+				ViewPosition = SetPiece.position.megaToWorld() + Displacement { 7, 7 };
+		} else {
+			position = PlaceMiniSet(L4DSTAIRS);
+			if (!position)
+				return false;
+			if (entry == ENTRY_PREV)
+				ViewPosition = position->megaToWorld() + Displacement { 7, 5 };
+		}
 	}
 
 	return true;
@@ -1147,7 +1142,7 @@ void GenerateLevel(lvl_entry entry)
 
 		MakeDmt();
 		FixTilesPatterns();
-		if (currlevel == 16) {
+		if (currlevel == 7) {
 			ProtectQuads();
 		}
 		if (Quests[Q_WARLORD].IsAvailable() || (currlevel == Quests[Q_BETRAYER]._qlevel && UseMultiplayerQuests())) {
@@ -1161,7 +1156,7 @@ void GenerateLevel(lvl_entry entry)
 		FloodTransparencyValues(6);
 		FixTransparency();
 		SetSetPieceRoom(SetPieceRoom.position, 6);
-		if (currlevel == 16) {
+		if (currlevel == 7) {
 			LoadDiabQuads(true);
 		}
 		if (PlaceStairs(entry))
@@ -1172,7 +1167,7 @@ void GenerateLevel(lvl_entry entry)
 
 	GeneralFix();
 
-	if (currlevel != 16) {
+	if (currlevel != 7) {
 		DRLG_PlaceThemeRooms(7, 10, 6, 8, true);
 	}
 
@@ -1184,7 +1179,7 @@ void GenerateLevel(lvl_entry entry)
 
 	DRLG_CheckQuests(SetPieceRoom.position);
 
-	if (currlevel == 15) {
+	if (currlevel == 6) {
 		bool isGateOpen = UseMultiplayerQuests() || Quests[Q_DIABLO]._qactive == QUEST_ACTIVE;
 		if (!isGateOpen)
 			L4PENTA.place(Quests[Q_DIABLO].position);
@@ -1199,7 +1194,7 @@ void GenerateLevel(lvl_entry entry)
 			}
 		}
 	}
-	if (currlevel == 16) {
+	if (currlevel == 7) {
 		LoadDiabQuads(false);
 	}
 }
