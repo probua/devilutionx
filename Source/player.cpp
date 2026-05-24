@@ -2437,6 +2437,8 @@ void NextPlrLevel(Player &player)
 	CalcPlrInv(player, true);
 }
 
+constexpr int ExperienceMultiplier = 10;
+
 void AddPlrExperience(Player &player, int lvl, int exp)
 {
 	if (&player != MyPlayer || player._pHitPoints <= 0)
@@ -2448,7 +2450,7 @@ void AddPlrExperience(Player &player, int lvl, int exp)
 	}
 
 	// Adjust xp based on difference in level between player and monster
-	uint32_t clampedExp = std::max(static_cast<int>(exp * (1 + (lvl - player._pLevel) / 10.0)), 0);
+	uint32_t clampedExp = std::max(static_cast<int>(exp * ExperienceMultiplier * (1 + (lvl - player._pLevel) / 10.0)), 0);
 
 	// Prevent power leveling
 	if (gbIsMultiplayer) {
@@ -2484,17 +2486,11 @@ void AddPlrExperience(Player &player, int lvl, int exp)
 
 void AddPlrMonstExper(int lvl, int exp, char pmask)
 {
-	int totplrs = 0;
-	for (size_t i = 0; i < Players.size(); i++) {
-		if (((1 << i) & pmask) != 0) {
-			totplrs++;
-		}
-	}
+	int totplrs = gbActivePlayers;
 
 	if (totplrs != 0) {
 		int e = exp / totplrs;
-		if ((pmask & (1 << MyPlayerId)) != 0)
-			AddPlrExperience(*MyPlayer, lvl, e);
+		AddPlrExperience(*MyPlayer, lvl, e);
 	}
 }
 
