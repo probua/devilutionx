@@ -201,3 +201,13 @@ Eliminadas via `QUEST_NOTAVAIL` forzado en `InitQuests()`.
 - **Fix:** `missile._mirange = 19` en `AddFlashBottom()` (`missiles.cpp:2057`)
 - **Nota:** Bug de devilutionX original, no del mod
 - **Detalle:** Ver `mod-fix-flash-spell.md`
+
+### 2025-05-25: Hechizos habilitados y DashStrike
+
+- **Hechizos de Diablo desbloqueados:** Nova y Apocalypse como libros (GetSpellBookLevel ya no las bloquea, Apocalypse sBookLvl 19→7)
+- **Hechizos de Hellfire habilitados:** Reflect, Berserk, RingOfFire en modo Diablo (exceptions en IsValidSpell + GetSpellBookLevel)
+- **Nuevo hechizo DashStrike:** Teletransporta adyacente al enemigo + golpe melee con daño arma ×1.5
+- **Libro de hechizos:** Expandido de 7 a 8 entries por página (37px height) para acomodar sin reemplazar originales
+- **Iconos:** `GetSpellIcon()` wrapper mapea iconos Hellfire a placeholders de Diablo. Reflect usa ManaShield como fallback visual
+- **Archivos:** 11 archivos (spelldat.h/cpp, spells.cpp, misdat.cpp, missiles.cpp/h, multi.cpp, spell_book.cpp, spell_icons.cpp/hpp, scrollrt.cpp)
+- **Detalle:** Ver `mod-hechizos.md`
