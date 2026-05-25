@@ -367,10 +367,6 @@ bool ForceQuests()
 	if (gbIsSpawn)
 		return false;
 
-	if (UseMultiplayerQuests()) {
-		return false;
-	}
-
 	for (auto &quest : Quests) {
 		if (quest._qidx != Q_BETRAYER && currlevel == quest._qlevel && quest._qslvl != 0) {
 			int ql = quest._qslvl - 1;

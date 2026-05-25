@@ -1180,7 +1180,7 @@ void GenerateLevel(lvl_entry entry)
 	DRLG_CheckQuests(SetPieceRoom.position);
 
 	if (currlevel == 6) {
-		bool isGateOpen = UseMultiplayerQuests() || Quests[Q_DIABLO]._qactive == QUEST_ACTIVE;
+		bool isGateOpen = Quests[Q_DIABLO]._qactive == QUEST_ACTIVE;
 		if (!isGateOpen)
 			L4PENTA.place(Quests[Q_DIABLO].position);
 
