@@ -71,7 +71,12 @@ bool IsValidSpell(SpellID spl)
 {
 	return spl > SpellID::Null
 	    && spl <= SpellID::LAST
-	    && (spl <= SpellID::LastDiablo || gbIsHellfire);
+	    && (spl <= SpellID::LastDiablo
+	        || spl == SpellID::Reflect
+	        || spl == SpellID::Berserk
+	        || spl == SpellID::RingOfFire
+	        || spl == SpellID::DashStrike
+	        || gbIsHellfire);
 }
 
 bool IsValidSpellFrom(int spellFrom)
@@ -323,9 +328,11 @@ int GetSpellBookLevel(SpellID s)
 
 	if (!gbIsHellfire) {
 		switch (s) {
-		case SpellID::Nova:
-		case SpellID::Apocalypse:
-			return -1;
+		case SpellID::Reflect:
+		case SpellID::Berserk:
+		case SpellID::RingOfFire:
+		case SpellID::DashStrike:
+			break;
 		default:
 			if (s > SpellID::LastDiablo)
 				return -1;

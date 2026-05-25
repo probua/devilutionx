@@ -79,9 +79,27 @@ const uint8_t SpellITbl[] = {
 	34,
 	34,
 	34,
+	9,
 };
 
 } // namespace
+
+uint8_t GetSpellIcon(SpellID spell)
+{
+	if (!gbIsHellfire) {
+		switch (spell) {
+		case SpellID::Reflect:
+			return 12;
+		case SpellID::Berserk:
+			return 19;
+		case SpellID::RingOfFire:
+			return 6;
+		default:
+			break;
+		}
+	}
+	return SpellITbl[static_cast<int8_t>(spell)];
+}
 
 void LoadLargeSpellIcons()
 {
@@ -134,7 +152,7 @@ void DrawLargeSpellIcon(const Surface &out, Point position, SpellID spell)
 #ifdef UNPACKED_MPQS
 	ClxDrawTRN(out, position, (*LargeSpellIconsBackground)[0], SplTransTbl);
 #endif
-	ClxDrawTRN(out, position, (*LargeSpellIcons)[SpellITbl[static_cast<int8_t>(spell)]], SplTransTbl);
+	ClxDrawTRN(out, position, (*LargeSpellIcons)[GetSpellIcon(spell)], SplTransTbl);
 }
 
 void DrawSmallSpellIcon(const Surface &out, Point position, SpellID spell)
@@ -142,7 +160,7 @@ void DrawSmallSpellIcon(const Surface &out, Point position, SpellID spell)
 #ifdef UNPACKED_MPQS
 	ClxDrawTRN(out, position, (*SmallSpellIconsBackground)[0], SplTransTbl);
 #endif
-	ClxDrawTRN(out, position, (*SmallSpellIcons)[SpellITbl[static_cast<int8_t>(spell)]], SplTransTbl);
+	ClxDrawTRN(out, position, (*SmallSpellIcons)[GetSpellIcon(spell)], SplTransTbl);
 }
 
 void DrawLargeSpellIconBorder(const Surface &out, Point position, uint8_t color)

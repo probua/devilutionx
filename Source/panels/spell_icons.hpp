@@ -12,6 +12,11 @@
 namespace devilution {
 
 /**
+ * @brief Get the sprite frame index for a spell icon.
+ */
+uint8_t GetSpellIcon(SpellID spell);
+
+/**
  * Draw a large (56x56) spell icon onto the given buffer.
  *
  * @param out Output buffer.

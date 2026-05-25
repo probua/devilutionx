@@ -416,8 +416,12 @@ void DrawPlayerIcons(const Surface &out, const Player &player, Point position, b
 {
 	if (player.pManaShield)
 		DrawPlayerIconHelper(out, MissileGraphicID::ManaShield, position, &player != MyPlayer, infraVision);
-	if (player.wReflections > 0)
-		DrawPlayerIconHelper(out, MissileGraphicID::Reflect, position + Displacement { 0, 16 }, &player != MyPlayer, infraVision);
+	if (player.wReflections > 0) {
+		MissileGraphicID reflectIcon = MissileGraphicID::Reflect;
+		if (!GetMissileSpriteData(MissileGraphicID::Reflect).sprites)
+			reflectIcon = MissileGraphicID::ManaShield;
+		DrawPlayerIconHelper(out, reflectIcon, position + Displacement { 0, 16 }, &player != MyPlayer, infraVision);
+	}
 }
 
 /**

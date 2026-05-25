@@ -29,16 +29,16 @@ OptionalOwnedClxSpriteList pSBkBtnCel;
 OptionalOwnedClxSpriteList pSpellBkCel;
 
 const size_t SpellBookPages = 6;
-const size_t SpellBookPageEntries = 7;
+const size_t SpellBookPageEntries = 8;
 
 /** Maps from spellbook page number and position to SpellID. */
 const SpellID SpellPages[SpellBookPages][SpellBookPageEntries] = {
-	{ SpellID::Null, SpellID::Firebolt, SpellID::ChargedBolt, SpellID::HolyBolt, SpellID::Healing, SpellID::HealOther, SpellID::Inferno },
-	{ SpellID::Resurrect, SpellID::FireWall, SpellID::Telekinesis, SpellID::Lightning, SpellID::TownPortal, SpellID::Flash, SpellID::StoneCurse },
-	{ SpellID::Phasing, SpellID::ManaShield, SpellID::Elemental, SpellID::Fireball, SpellID::FlameWave, SpellID::ChainLightning, SpellID::Guardian },
-	{ SpellID::Nova, SpellID::Golem, SpellID::Teleport, SpellID::Apocalypse, SpellID::BoneSpirit, SpellID::BloodStar, SpellID::Etherealize },
-	{ SpellID::LightningWall, SpellID::Immolation, SpellID::Warp, SpellID::Reflect, SpellID::Berserk, SpellID::RingOfFire, SpellID::Search },
-	{ SpellID::Invalid, SpellID::Invalid, SpellID::Invalid, SpellID::Invalid, SpellID::Invalid, SpellID::Invalid, SpellID::Invalid }
+	{ SpellID::Null, SpellID::Firebolt, SpellID::ChargedBolt, SpellID::HolyBolt, SpellID::Healing, SpellID::HealOther, SpellID::Inferno, SpellID::DashStrike },
+	{ SpellID::Resurrect, SpellID::FireWall, SpellID::Telekinesis, SpellID::Lightning, SpellID::TownPortal, SpellID::Flash, SpellID::StoneCurse, SpellID::Reflect },
+	{ SpellID::Phasing, SpellID::ManaShield, SpellID::Elemental, SpellID::Fireball, SpellID::FlameWave, SpellID::ChainLightning, SpellID::Guardian, SpellID::Berserk },
+	{ SpellID::Nova, SpellID::Golem, SpellID::Teleport, SpellID::Apocalypse, SpellID::BoneSpirit, SpellID::BloodStar, SpellID::Etherealize, SpellID::RingOfFire },
+	{ SpellID::LightningWall, SpellID::Immolation, SpellID::Warp, SpellID::Reflect, SpellID::Berserk, SpellID::RingOfFire, SpellID::Search, SpellID::Invalid },
+	{ SpellID::Invalid, SpellID::Invalid, SpellID::Invalid, SpellID::Invalid, SpellID::Invalid, SpellID::Invalid, SpellID::Invalid, SpellID::Invalid }
 };
 
 SpellID GetSpellFromSpellPage(size_t page, size_t entry)
@@ -63,7 +63,7 @@ SpellID GetSpellFromSpellPage(size_t page, size_t entry)
 	return SpellPages[page][entry];
 }
 
-constexpr Size SpellBookDescription { 250, 43 };
+constexpr Size SpellBookDescription { 250, 37 };
 constexpr int SpellBookDescriptionPaddingHorizontal = 2;
 
 void PrintSBookStr(const Surface &out, Point position, string_view text, UiFlags flags = UiFlags::None)
@@ -124,7 +124,6 @@ void DrawSpellBook(const Surface &out)
 	if (gbIsHellfire && sbooktab < 5) {
 		ClxDraw(out, GetPanelPosition(UiPanels::Spell, { 61 * sbooktab + 7, 348 }), (*pSBkBtnCel)[sbooktab]);
 	} else {
-		// BUGFIX: rendering of page 3 and page 4 buttons are both off-by-one pixel (fixed).
 		int sx = 76 * sbooktab + 7;
 		if (sbooktab == 2 || sbooktab == 3) {
 			sx++;
@@ -134,10 +133,10 @@ void DrawSpellBook(const Surface &out)
 	Player &player = *InspectPlayer;
 	uint64_t spl = player._pMemSpells | player._pISpells | player._pAblSpells;
 
-	const int lineHeight = 18;
+	const int lineHeight = 16;
 
 	int yp = 12;
-	const int textPaddingTop = 7;
+	const int textPaddingTop = 5;
 	for (size_t pageEntry = 0; pageEntry < SpellBookPageEntries; pageEntry++) {
 		SpellID sn = GetSpellFromSpellPage(sbooktab, pageEntry);
 		if (IsValidSpell(sn) && (spl & GetSpellBitmask(sn)) != 0) {
@@ -197,7 +196,7 @@ void CheckSBook()
 	// Spell icons/buttons are 37x38 pixels, laid out from 11,18 with a 5 pixel margin between each icon. This is close
 	// enough to the height of the space given to spell descriptions that we can reuse that value and subtract the
 	// padding from the end of the area.
-	Rectangle iconArea = { GetPanelPosition(UiPanels::Spell, { 11, 18 }), Size { 37, SpellBookDescription.height * 7 - 5 } };
+	Rectangle iconArea = { GetPanelPosition(UiPanels::Spell, { 11, 18 }), Size { 37, SpellBookDescription.height * 8 - 5 } };
 	if (iconArea.contains(MousePosition) && !IsInspectingPlayer()) {
 		SpellID sn = GetSpellFromSpellPage(sbooktab, (MousePosition.y - iconArea.position.y) / SpellBookDescription.height);
 		Player &player = *InspectPlayer;
@@ -221,13 +220,10 @@ void CheckSBook()
 	// end up with an extra pixel somewhere around the buttons. Vanilla Diablo had the buttons left-aligned, devilutionX
 	// instead justifies the buttons and puts the gap between buttons 2/3. See DrawSpellBook
 	const int TabWidth = gbIsHellfire ? 61 : 76;
-	// Tabs are drawn in a row near the bottom of the panel
 	Rectangle tabArea = { GetPanelPosition(UiPanels::Spell, { 7, 320 }), Size { 305, 29 } };
 	if (tabArea.contains(MousePosition)) {
 		int hitColumn = MousePosition.x - tabArea.position.x;
-		// Clicking on the gutter currently activates tab 3. Could make it do nothing by checking for == here and return early.
 		if (!gbIsHellfire && hitColumn > TabWidth * 2) {
-			// Subtract 1 pixel to account for the gutter between buttons 2/3
 			hitColumn--;
 		}
 		sbooktab = hitColumn / TabWidth;

@@ -831,6 +831,7 @@ void GetDamageAmt(SpellID i, int *mind, int *maxd)
 	case SpellID::Berserk:
 	case SpellID::Search:
 	case SpellID::RuneOfStone:
+	case SpellID::DashStrike:
 		*mind = -1;
 		*maxd = -1;
 		break;
@@ -1781,6 +1782,87 @@ void AddPhasing(Missile &missile, AddMissileParameter &parameter)
 	}
 
 	missile.position.tile = targets[std::max<int32_t>(GenerateRnd(count), 0)];
+}
+
+void AddDashStrike(Missile &missile, AddMissileParameter &parameter)
+{
+	if (missile._micaster != TARGET_MONSTERS) {
+		missile._miDelFlag = true;
+		return;
+	}
+
+	Player &player = Players[missile._misource];
+
+	std::optional<Point> targetDest = FindClosestValidPosition(
+	    [&player](Point target) {
+		    return PosOkPlayer(player, target);
+	    },
+	    parameter.dst, 0, 1);
+
+	if (!targetDest) {
+		missile._miDelFlag = true;
+		parameter.spellFizzled = true;
+		return;
+	}
+
+	missile.position.tile = *targetDest;
+	missile.position.start = *targetDest;
+	missile.var1 = parameter.dst.x;
+	missile.var2 = parameter.dst.y;
+	missile._mirange = 2;
+}
+
+void ProcessDashStrike(Missile &missile)
+{
+	missile._mirange--;
+	if (missile._mirange <= 0) {
+		missile._miDelFlag = true;
+		return;
+	}
+
+	int id = missile._misource;
+	Player &player = Players[id];
+
+	std::optional<Point> teleportDestination = FindClosestValidPosition(
+	    [&player](Point target) {
+		    return PosOkPlayer(player, target);
+	    },
+	    missile.position.tile, 0, 1);
+
+	if (!teleportDestination)
+		return;
+
+	dPlayer[player.position.tile.x][player.position.tile.y] = 0;
+	PlrClrTrans(player.position.tile);
+	player.position.tile = *teleportDestination;
+	player.position.future = player.position.tile;
+	player.position.old = player.position.tile;
+	PlrDoTrans(player.position.tile);
+	dPlayer[player.position.tile.x][player.position.tile.y] = id + 1;
+	if (leveltype != DTYPE_TOWN) {
+		ChangeLightXY(player.lightId, player.position.tile);
+		ChangeVisionXY(player.getId(), player.position.tile);
+	}
+	if (&player == MyPlayer) {
+		ViewPosition = player.position.tile;
+	}
+
+	Point targetPos { static_cast<int>(missile.var1), static_cast<int>(missile.var2) };
+	Direction dir = GetDirection(player.position.tile, targetPos);
+	player._pdir = dir;
+
+	Point hitPos = player.position.tile + dir;
+	Monster *monster = FindMonsterAtPosition(hitPos);
+	if (monster != nullptr && monster->hitPoints > 0) {
+		int mind = player._pIMinDam + player._pIBonusDamMod;
+		int maxd = player._pIMaxDam + player._pIBonusDamMod;
+		int dam = GenerateRnd(maxd - mind + 1) + mind;
+		dam += dam * player._pIBonusDam / 100;
+		dam += player._pDamageMod;
+		dam = dam * 3 / 2;
+		PlaySfxLoc(PS_SWING, player.position.tile);
+		ApplyMonsterDamage(DamageType::Physical, *monster, dam);
+	}
 }
 
 void AddFirebolt(Missile &missile, AddMissileParameter &parameter)

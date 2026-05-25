@@ -142,7 +142,7 @@ void NetReceivePlayerData(TPkt *pkt)
 	Point target = myPlayer.GetTargetPosition();
 	// Don't send desired target position when we will change our position soon.
 	// This prevents a desync where the remote client starts a walking to the old target position when the teleport is finished but the the new position isn't received yet.
-	if (myPlayer._pmode == PM_SPELL && IsAnyOf(myPlayer.executedSpell.spellId, SpellID::Teleport, SpellID::Phasing, SpellID::Warp))
+	if (myPlayer._pmode == PM_SPELL && IsAnyOf(myPlayer.executedSpell.spellId, SpellID::Teleport, SpellID::Phasing, SpellID::Warp, SpellID::DashStrike))
 		target = {};
 
 	pkt->hdr.wCheck = HeaderCheckVal;
