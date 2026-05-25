@@ -130,3 +130,51 @@ Esto evita generar theme rooms en el nivel de Diablo (que tiene un layout fijo d
   3. Las palancas de Diablo funcionan (abren las puertas correctas)
 - `drlg_l1.cpp` no necesitó cambios, lo que confirma que los niveles 1-2 de Cathedral son compatibles con el generador original
 - Los minarea del switch en `drlg_l1.cpp` podrían ajustarse si los niveles de Cathedral se sienten muy grandes o pequeños — pero el código ya los trata como niveles 1 y 2, que es correcto
+
+## Bug fix: Catacombs quest room sizing
+
+### Problema
+
+Crash al entrar al nivel 4: `bitset::set: __position (which is 1610) >= _Nb (which is 1600)`. La posición 1610 = 40*40 + 10 indica acceso fuera del bitset `Protected[40][40]`.
+
+### Causa
+
+`CreateDungeon()` en `drlg_l2.cpp` usa un switch sobre `currlevel` para asignar tamaños de sala a quests:
+
+```cpp
+switch (currlevel) {
+case 3:
+    if (Quests[Q_BLOOD]._qactive != QUEST_NOTAVAIL)
+        size = { 14, 20 };           // Q_BLOOD en nivel 3
+    break;
+case 4:
+    if (Quests[Q_BLIND]._qactive != QUEST_NOTAVAIL)
+        size = { 15, 15 };           // Q_BLIND en nivel 4
+    break;
+}
+```
+
+Después del hotfix "Quest reorganization" (Q_BLIND→nivel 3, Q_BLOOD→nivel 4), **este switch no se actualizó**. Resultado:
+- Nivel 3: checkea Q_BLOOD (que ya no está en nivel 3) → no crea sala → Q_BLIND no tiene sala
+- Nivel 4: checkea Q_BLIND (que ya no está en nivel 4) → no crea sala → Q_BLOOD no tiene sala
+
+Sin sala asignada, el set piece se coloca en coordenadas incorrectas, causando acceso OOB al bitset `Protected`.
+
+### Fix
+
+Actualizado el switch para que coincida con la nueva distribución de quests:
+
+```cpp
+switch (currlevel) {
+case 3:
+    if (Quests[Q_BLIND]._qactive != QUEST_NOTAVAIL)
+        size = { 15, 15 };           // Q_BLIND ahora en nivel 3
+    break;
+case 4:
+    if (Quests[Q_BLOOD]._qactive != QUEST_NOTAVAIL)
+        size = { 14, 20 };           // Q_BLOOD ahora en nivel 4
+    break;
+}
+```
+
+`LoadQuestSetPieces()` no necesitó cambio — usa `IsAvailable()` que ya verifica `_qlevel == currlevel` dinámicamente.

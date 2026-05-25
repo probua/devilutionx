@@ -2430,12 +2430,12 @@ bool CreateDungeon()
 
 	switch (currlevel) {
 	case 3:
-		if (Quests[Q_BLOOD]._qactive != QUEST_NOTAVAIL)
-			size = { 14, 20 };
-		break;
-	case 4:
 		if (Quests[Q_BLIND]._qactive != QUEST_NOTAVAIL)
 			size = { 15, 15 };
+		break;
+	case 4:
+		if (Quests[Q_BLOOD]._qactive != QUEST_NOTAVAIL)
+			size = { 14, 20 };
 		if (Quests[Q_SCHAMB]._qactive != QUEST_NOTAVAIL)
 			size = { 10, 10 };
 		break;

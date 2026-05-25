@@ -97,3 +97,137 @@ Todas usan `NetSendCmdQuest()` para sincronizar estado, lo que mitiga el riesgo.
 - Poisoned Water (Q_PWATER) se colocó en Catacombs (nivel 3). Aunque es una quest "de agua", el set level `SL_POISONWATER` usa tiles `DTYPE_CAVES` internamente — no hay conflicto visual.
 - Las referencias a `_pLvlVisited` para quests eliminadas (Q_LTBANNER, Q_ROCK) en `towners.cpp` son inofensivas — están protegidas por `_qactive != QUEST_NOTAVAIL`.
 - Las referencias Hellfire (Q_FARMER, Q_JERSEY) en `towners.cpp` con `_pLvlVisited[9]` y `_pLvlVisited[21]` no necesitan cambio.
+
+## Quest reorganization (hotfix post-implementación)
+
+### Problema
+
+Q_PWATER no funcionaba en nivel 3 (Catacombs). La entrada al set level (`PWATERIN` miniset) solo es colocada por el generador de Cathedral (`drlg_l1.cpp`), y el generador de Catacombs (`drlg_l2.cpp`) no tiene soporte para PWATER.
+
+### Cambios
+
+| Quest | Antes | Después |
+|---|---|---|
+| Q_PWATER | Nivel 3 (Catacombs) — no funcionaba | **Desactivada** (QUEST_NOTAVAIL) |
+| Q_BLIND | Nivel 4 (Catacombs) | **Nivel 3** (Catacombs) |
+| Q_BLOOD | Eliminada | **Nivel 4** (Catacombs) — reactivada |
+
+#### QuestsData[] en `quests.cpp`
+
+- Q_BLIND: `_qdlvl` y `_qdmultlvl` cambiados de 4 a 3
+- Q_BLOOD: `_qdlvl` y `_qdmultlvl` cambiados a 4, `isSinglePlayerOnly` cambiado a `false`
+
+#### InitQuests() en `quests.cpp`
+
+Lista de quests eliminadas actualizada: Q_PWATER agregada, Q_BLOOD removida.
+
+### Q_BLOOD soporte en drlg_l2.cpp
+
+Q_BLOOD ya tenía soporte completo en el generador de Catacombs:
+- `LoadQuestSetPieces()` carga `blood1.dun`
+- Objetos (pedestal, Blood Book) se colocan via `Quests[Q_BLOOD].IsAvailable()`
+
+### Leoric (Q_SKELKING) set level en multiplayer
+
+Originalmente, Leoric solo usaba set level en single-player. En MP aparecía directamente en el nivel.
+
+**Cambios para habilitar set level en MP:**
+
+1. `drlg_l1.cpp` `LoadQuestSetPieces()`: Removido guard `!UseMultiplayerQuests()` para que la tumba (`skngdo.dun`) se coloque también en MP
+2. `quests.cpp` `CheckQuests()`: El early return `if (UseMultiplayerQuests()) return;` ahora incluye la lógica de entrada a set levels antes de retornar
+
+**Riesgo:** Mínimo. Leoric es menos complejo que Lazarus (que ya funciona como set level en MP). El set level es estático y el estado se sincroniza via `NetSendCmdQuest()`.
+
+## Set levels fix en multiplayer
+
+### Problema
+
+Dos bugs relacionados con set levels en MP:
+
+1. **Monstruos duplicados:** Leoric aparecía directamente en nivel 2 y Lazarus (+ RedVex + BlackJade) aparecían directamente en nivel 6, en vez de dentro de sus set levels. El jugador los mataba en el nivel principal sin necesidad de entrar a la tumba/Lair.
+2. **Re-entrada infinita:** Después de matar a Lazarus, la pentagrama en nivel 6 que debería llevar a nivel 7 (Diablo) enviaba al jugador de vuelta a Lazarus Lair.
+
+### Causa raíz
+
+El juego original tiene dos rutas distintas para quests con set level:
+
+- **SP:** El jefe está dentro del set level. El jugador entra via portal/entrada especial.
+- **MP:** El jefe aparece directamente en el nivel principal. No se usa set level.
+
+El mod habilitó los set levels en MP (tumba de Leoric, Lazarus Lair) para que la experiencia sea igual a SP, pero no eliminó el código de colocación directa de monstruos en el nivel principal.
+
+### Cambios en `monster.cpp`
+
+**Leoric (línea ~480):** Eliminado el bloque que colocaba a SkeletonKing directamente en nivel 2 en MP:
+```cpp
+// ANTES:
+if (currlevel == Quests[Q_SKELKING]._qlevel && UseMultiplayerQuests()) {
+    for (size_t i = 0; i < LevelMonsterTypeCount; i++) {
+        if (IsSkel(LevelMonsterTypes[i].type)) {
+            PlaceUniqueMonst(UniqueMonsterType::SkeletonKing, i, 30);
+            break;
+        }
+    }
+}
+
+// DESPUÉS: eliminado. Leoric solo se coloca en SL_SKELKING (línea 542)
+```
+
+**Lazarus (línea ~517):** Eliminada la colocación directa de Lazarus + RedVex + BlackJade en nivel 6 en MP:
+```cpp
+// ANTES:
+if (currlevel == Quests[Q_BETRAYER]._qlevel && UseMultiplayerQuests()) {
+    AddMonsterType(UniqueMonsterType::Lazarus, PLACE_UNIQUE);
+    AddMonsterType(UniqueMonsterType::RedVex, PLACE_UNIQUE);
+    PlaceUniqueMonst(UniqueMonsterType::Lazarus, 0, 0);
+    PlaceUniqueMonst(UniqueMonsterType::RedVex, 0, 0);
+    PlaceUniqueMonst(UniqueMonsterType::BlackJade, 0, 0);
+    auto dunData = LoadFileInMem<uint16_t>("levels\\l4data\\vile1.dun");
+    SetMapMonsters(dunData.get(), SetPiece.position.megaToWorld());
+}
+
+// DESPUÉS: solo se mantiene SetMapMonsters para los monstruos del set piece:
+if (currlevel == Quests[Q_BETRAYER]._qlevel && UseMultiplayerQuests()) {
+    auto dunData = LoadFileInMem<uint16_t>("levels\\l4data\\vile1.dun");
+    SetMapMonsters(dunData.get(), SetPiece.position.megaToWorld());
+}
+```
+
+Lazarus, RedVex y BlackJade solo se colocan dentro de `SL_VILEBETRAYER` (línea 544-550).
+
+### Cambios en `quests.cpp` CheckQuests()
+
+Agregado `quest._qactive != QUEST_DONE` en ambas ramas de detección de set level:
+
+**Rama MP (línea ~299):**
+```cpp
+if (currlevel == quest._qlevel
+    && quest._qslvl != 0
+    && quest._qactive != QUEST_NOTAVAIL
+    && quest._qactive != QUEST_DONE    // <-- NUEVO
+    && MyPlayer->position.tile == quest.position
+    && (quest._qidx != Q_BETRAYER || quest._qvar1 >= 3))
+```
+
+**Rama SP (línea ~351):** Mismo cambio aplicado.
+
+Esto evita que `CheckQuests()` intercepte al jugador en la pentagrama y lo envíe de vuelta a Lazarus Lair después de completar la quest.
+
+### Flujo correcto después del fix
+
+**Leoric (nivel 2):**
+1. Nivel 2 se genera con la tumba (`skngdo.dun`) como set piece
+2. Jugador pisa la entrada de la tumba → `CheckQuests()` envía a `SL_SKELKING`
+3. Dentro del set level: Leoric se coloca via `PlaceUniqueMonst(SkeletonKing)`
+4. Mata a Leoric → quest completa → vuelve a nivel 2 via `WM_DIABRTNLVL`
+
+**Lazarus (nivel 6):**
+1. Nivel 6 se genera con el set piece de Lazarus y la pentagrama (`L4PENTA2`)
+2. Jugador habla con el altar (`OBJ_ALTBOY`) → activa la quest (`_qvar1 = 3`)
+3. Jugador pisa la pentagrama → `CheckQuests()` envía a `SL_VILEBETRAYER`
+4. Dentro del set level: Lazarus + RedVex + BlackJade se colocan via `PlaceUniqueMonst()`
+5. Mata a Lazarus → `_qactive = QUEST_DONE`, `_qvar1 = 7`, Q_DIABLO se activa
+6. Al morir Lazarus en MP: se buscan pentagramas (tile 369) y se registran como `WM_DIABNEXTLVL`
+7. Vuelve a nivel 6 → la pentagrama ahora tiene `WM_DIABNEXTLVL` (no `WM_DIABSETLVL`)
+8. Pisa la pentagrama → `CheckTriggers()` envía a nivel 7 (Diablo)
+9. `CheckQuests()` ya no intercepta porque `_qactive == QUEST_DONE`

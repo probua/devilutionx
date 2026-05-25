@@ -477,15 +477,6 @@ void PlaceQuestMonsters()
 			PlaceUniqueMonst(UniqueMonsterType::Butcher, 0, 0);
 		}
 
-		if (currlevel == Quests[Q_SKELKING]._qlevel && UseMultiplayerQuests()) {
-			for (size_t i = 0; i < LevelMonsterTypeCount; i++) {
-				if (IsSkel(LevelMonsterTypes[i].type)) {
-					PlaceUniqueMonst(UniqueMonsterType::SkeletonKing, i, 30);
-					break;
-				}
-			}
-		}
-
 		if (Quests[Q_LTBANNER].IsAvailable()) {
 			auto dunData = LoadFileInMem<uint16_t>("levels\\l1data\\banner1.dun");
 			SetMapMonsters(dunData.get(), SetPiece.position.megaToWorld());
@@ -515,11 +506,6 @@ void PlaceQuestMonsters()
 		}
 
 		if (currlevel == Quests[Q_BETRAYER]._qlevel && UseMultiplayerQuests()) {
-			AddMonsterType(UniqueMonsterType::Lazarus, PLACE_UNIQUE);
-			AddMonsterType(UniqueMonsterType::RedVex, PLACE_UNIQUE);
-			PlaceUniqueMonst(UniqueMonsterType::Lazarus, 0, 0);
-			PlaceUniqueMonst(UniqueMonsterType::RedVex, 0, 0);
-			PlaceUniqueMonst(UniqueMonsterType::BlackJade, 0, 0);
 			auto dunData = LoadFileInMem<uint16_t>("levels\\l4data\\vile1.dun");
 			SetMapMonsters(dunData.get(), SetPiece.position.megaToWorld());
 		}

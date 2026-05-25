@@ -57,16 +57,16 @@ Definidas en `Source/levels/gendung.h`:
 | Quest | Nivel mod | Nivel original | Tipo |
 |---|---|---|---|
 | Butcher (Q_BUTCHER) | 1 | 2 | Cathedral |
-| Skeleton King (Q_SKELKING) | 2 | 1 | Cathedral (set level) |
-| Poisoned Water (Q_PWATER) | 3 | 5 | Catacombs (set level) |
-| Halls of the Blind (Q_BLIND) | 4 | 7 | Catacombs |
+| Skeleton King (Q_SKELKING) | 2 | 1 | Cathedral (set level, SP y MP) |
+| Halls of the Blind (Q_BLIND) | 3 | 7 | Catacombs |
+| Valor (Q_BLOOD) | 4 | 8 | Catacombs |
 | Anvil of Fury (Q_ANVIL) | 5 | 9 | Caves |
 | Betrayer/Lazarus (Q_BETRAYER) | 6 | 15 | Hell (set level) |
 | Diablo (Q_DIABLO) | 7 | 16 | Hell |
 
 ## Quests eliminadas (9)
 
-Q_ROCK, Q_MUSHROOM, Q_GARBUD, Q_ZHAR, Q_VEIL, Q_LTBANNER, Q_BLOOD, Q_WARLORD, Q_SCHAMB
+Q_ROCK, Q_MUSHROOM, Q_GARBUD, Q_ZHAR, Q_VEIL, Q_LTBANNER, Q_PWATER, Q_WARLORD, Q_SCHAMB
 
 Eliminadas via `QUEST_NOTAVAIL` forzado en `InitQuests()`.
 
@@ -136,3 +136,28 @@ Eliminadas via `QUEST_NOTAVAIL` forzado en `InitQuests()`.
 - **Causa:** `InitObjectGFX()` usa `currlevel` para comparar con `minlvl`/`maxlvl` de objetos (basados en niveles originales 1-16). Con niveles 1-7 del mod, los rangos nunca coinciden para Catacombs (minlvl=5), Caves (minlvl=9) o Hell (minlvl=13).
 - **Fix:** `currlevel` → `GetVirtualLevel()` en la comparación de rangos del loop de `InitObjectGFX()`. Mismo patrón que el fix de storybooks.
 - **Detalle:** Ver `mod-etapa-5-items.md` sección "Bug fix: InitObjectGFX() level-range loading"
+
+### 2025-05-24: Quest reorganization
+
+- **Cambio:** PWATER desactivada (no funcionaba en Catacombs), Q_BLOOD reactivada en nivel 4, Q_BLIND movida a nivel 3
+- **Cambio:** Leoric (Q_SKELKING) ahora siempre usa set level, incluyendo multiplayer
+- **Archivos:** `quests.cpp` (QuestsData[], InitQuests, CheckQuests), `drlg_l1.cpp` (LoadQuestSetPieces)
+- **Detalle:** Ver `mod-etapa-4-quests.md` sección "Quest reorganization"
+
+### 2025-05-24: Catacombs quest room crash (nivel 4)
+
+- **Bug:** Crash al entrar al nivel 4 — `bitset::set: __position (which is 1610) >= _Nb (which is 1600)`
+- **Causa:** `CreateDungeon()` en `drlg_l2.cpp` usaba `currlevel` directamente en un switch para asignar tamaños de sala a quests. Después del swap Q_BLIND→nivel 3 / Q_BLOOD→nivel 4, el switch no se actualizó — nivel 4 no creaba sala para Q_BLOOD, causando que el set piece se colocara en coordenadas inválidas
+- **Fix:** Actualizado el switch: case 3 → Q_BLIND (15x15), case 4 → Q_BLOOD (14x20)
+- **Detalle:** Ver `mod-etapa-6-dungeon.md` sección "Bug fix: Catacombs quest room sizing"
+
+### 2025-05-24: Set levels en multiplayer — monstruos duplicados y re-entrada
+
+- **Bug 1:** Leoric aparecía directamente en nivel 2 y Lazarus aparecía directamente en nivel 6, en vez de dentro de sus set levels
+- **Bug 2:** Después de matar a Lazarus, la pentagrama que debería llevar a nivel 7 (Diablo) enviaba de vuelta a Lazarus Lair
+- **Causa 1:** `PlaceQuestMonsters()` en `monster.cpp` colocaba a Leoric y Lazarus directamente en el nivel principal en MP, además de dentro de sus set levels
+- **Causa 2:** `CheckQuests()` no excluía quests con `_qactive == QUEST_DONE`, así que al pisar la pentagrama (posición de Q_BETRAYER) te enviaba al set level aunque ya estaba completado
+- **Fix:**
+  - `monster.cpp`: Eliminada colocación directa de Leoric en nivel 2 (MP) y Lazarus+esbirros en nivel 6 (MP). Solo se colocan dentro de sus respectivos set levels (`SL_SKELKING`, `SL_VILEBETRAYER`)
+  - `quests.cpp`: Agregado `quest._qactive != QUEST_DONE` en ambas ramas (SP y MP) de `CheckQuests()` — evita re-entrar a set levels completados
+- **Detalle:** Ver `mod-etapa-4-quests.md` sección "Set levels fix en multiplayer"

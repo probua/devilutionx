@@ -53,8 +53,8 @@ QuestData QuestsData[] = {
 	{       7,           7, DTYPE_NONE,         23,      100,    SL_NONE,         false,              TEXT_VILE3,    N_("Diablo")                   },
 	{       1,           1, DTYPE_NONE,          0,      100,    SL_NONE,         false,              TEXT_BUTCH9,   N_("The Butcher")              },
 	{       4,          -1, DTYPE_NONE,          4,      100,    SL_NONE,         true,               TEXT_BANNER2,  N_("Ogden's Sign")             },
-	{       4,           4, DTYPE_NONE,          8,      100,    SL_NONE,         false,              TEXT_BLINDING, N_("Halls of the Blind")       },
-	{       5,          -1, DTYPE_NONE,          6,      100,    SL_NONE,         true,               TEXT_BLOODY,   N_("Valor")                    },
+	{       3,           3, DTYPE_NONE,          8,      100,    SL_NONE,         false,              TEXT_BLINDING, N_("Halls of the Blind")       },
+	{       4,           4, DTYPE_NONE,          6,      100,    SL_NONE,         false,              TEXT_BLOODY,   N_("Valor")                    },
 	{       5,           5, DTYPE_NONE,         11,      100,    SL_NONE,         false,              TEXT_ANVIL5,   N_("Anvil of Fury")            },
 	{      13,          -1, DTYPE_NONE,         20,      100,    SL_NONE,         true,               TEXT_BLOODWAR, N_("Warlord of Blood")         },
 	{       2,           2, DTYPE_CATHEDRAL,     2,      100,    SL_SKELKING,     false,              TEXT_KING2,    N_("The Curse of King Leoric") },
@@ -251,7 +251,7 @@ void InitQuests()
 	}
 
 	// Mod: disable quests not included in the 7-level mod
-	for (quest_id disabledQuest : { Q_ROCK, Q_MUSHROOM, Q_GARBUD, Q_ZHAR, Q_VEIL, Q_LTBANNER, Q_BLOOD, Q_WARLORD, Q_SCHAMB }) {
+	for (quest_id disabledQuest : { Q_ROCK, Q_MUSHROOM, Q_GARBUD, Q_ZHAR, Q_VEIL, Q_LTBANNER, Q_PWATER, Q_WARLORD, Q_SCHAMB }) {
 		Quests[disabledQuest]._qactive = QUEST_NOTAVAIL;
 	}
 
@@ -292,8 +292,23 @@ void CheckQuests()
 	}
 
 	if (UseMultiplayerQuests()) {
-		return;
+		if (!setlevel && MyPlayer->_pmode == PM_STAND) {
+			for (auto &quest : Quests) {
+			if (currlevel == quest._qlevel
+				    && quest._qslvl != 0
+				    && quest._qactive != QUEST_NOTAVAIL
+				    && quest._qactive != QUEST_DONE
+				    && MyPlayer->position.tile == quest.position
+				    && (quest._qidx != Q_BETRAYER || quest._qvar1 >= 3)) {
+				if (quest._qlvltype != DTYPE_NONE) {
+					setlvltype = quest._qlvltype;
+				}
+				StartNewLvl(*MyPlayer, WM_DIABSETLVL, quest._qslvl);
+			}
+		}
 	}
+	return;
+}
 
 	if (currlevel == quest._qlevel
 	    && !setlevel
@@ -334,6 +349,7 @@ void CheckQuests()
 			if (currlevel == quest._qlevel
 			    && quest._qslvl != 0
 			    && quest._qactive != QUEST_NOTAVAIL
+			    && quest._qactive != QUEST_DONE
 			    && MyPlayer->position.tile == quest.position
 			    && (quest._qidx != Q_BETRAYER || quest._qvar1 >= 3)) {
 				if (quest._qlvltype != DTYPE_NONE) {
