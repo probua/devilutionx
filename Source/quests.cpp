@@ -266,9 +266,6 @@ void InitQuests()
 	if (Quests[Q_ROCK]._qactive == QUEST_NOTAVAIL)
 		Quests[Q_ROCK]._qvar2 = 2;
 	Quests[Q_LTBANNER]._qvar1 = 1;
-	if (UseMultiplayerQuests())
-		Quests[Q_BETRAYER]._qvar1 = 2;
-	// In multiplayer items spawn during level generation to avoid desyncs
 	if (gbIsMultiplayer && Quests[Q_MUSHROOM]._qactive == QUEST_INIT)
 		Quests[Q_MUSHROOM]._qvar1 = QS_TOMESPAWNED;
 }
@@ -285,13 +282,16 @@ void CheckQuests()
 		return;
 
 	auto &quest = Quests[Q_BETRAYER];
-	if (quest.IsAvailable() && UseMultiplayerQuests() && quest._qvar1 == 2) {
-		AddObject(OBJ_ALTBOY, SetPiece.position.megaToWorld() + Displacement { 4, 6 });
-		quest._qvar1 = 3;
-		NetSendCmdQuest(true, quest);
-	}
 
 	if (UseMultiplayerQuests()) {
+		if (currlevel == quest._qlevel
+		    && !setlevel
+		    && quest._qactive == QUEST_ACTIVE
+		    && quest._qvar2 == 0) {
+			AddMissile(quest.position, quest.position, Direction::South, MissileID::RedPortal, TARGET_MONSTERS, MyPlayerId, 0, 0);
+			quest._qvar2 = 1;
+		}
+
 		if (!setlevel && MyPlayer->_pmode == PM_STAND) {
 			for (auto &quest : Quests) {
 			if (currlevel == quest._qlevel
@@ -553,14 +553,6 @@ void ResyncMPQuests()
 		butcherQuest._qactive = QUEST_ACTIVE;
 		NetSendCmdQuest(true, butcherQuest);
 	}
-
-	auto &betrayerQuest = Quests[Q_BETRAYER];
-	if (betrayerQuest._qactive == QUEST_INIT && currlevel == betrayerQuest._qlevel - 1) {
-		betrayerQuest._qactive = QUEST_ACTIVE;
-		NetSendCmdQuest(true, betrayerQuest);
-	}
-	if (betrayerQuest.IsAvailable())
-		AddObject(OBJ_ALTBOY, SetPiece.position.megaToWorld() + Displacement { 4, 6 });
 
 	auto &cryptQuest = Quests[Q_GRAVE];
 	if (cryptQuest._qactive == QUEST_INIT && currlevel == cryptQuest._qlevel - 1) {

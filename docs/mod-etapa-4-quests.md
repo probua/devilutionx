@@ -231,3 +231,147 @@ Esto evita que `CheckQuests()` intercepte al jugador en la pentagrama y lo enví
 7. Vuelve a nivel 6 → la pentagrama ahora tiene `WM_DIABNEXTLVL` (no `WM_DIABSETLVL`)
 8. Pisa la pentagrama → `CheckTriggers()` envía a nivel 7 (Diablo)
 9. `CheckQuests()` ya no intercepta porque `_qactive == QUEST_DONE`
+
+## Lazarus quest flow completo (Staff + Cain + portal rojo)
+
+### Problema
+
+Después del fix anterior, Lazarus no aparecía en ningún lado en MP — se eliminó su colocación directa en nivel 6, pero no se implementó un mecanismo alternativo para entrar al set level. El portal rojo nunca aparecía porque la quest se auto-activaba en MP (`_qvar1 = 2` en `InitQuests()`), sin seguir el flujo original del Staff of Lazarus.
+
+### Flujo original de Diablo (SP)
+
+1. Nivel 14-15: Jugador encuentra el **Staff of Lazarus** (`IDI_LAZSTAFF`) en un pedestal (`OBJ_LAZSTAND`)
+2. Pueblo: Jugador habla con **Cain** (storyteller) con el Staff → Cain lo toma → quest activada (`_qvar1 = 2`, `_qactive = QUEST_ACTIVE`)
+3. Nivel 15: `CheckQuests()` SP detecta `_qvar1 >= 2` → genera **portal rojo** en la pentagrama
+4. Jugador pisa el portal → entra a `SL_VILEBETRAYER` (Lazarus Lair)
+5. Dentro: Lazarus habla → se vuelve hostil → combate → muerte
+6. Portal rojo dentro del set level → vuelve a nivel 15
+7. Pentagrama lleva a nivel 16 (Diablo)
+
+### Flujo original de Diablo (MP)
+
+En MP, Lazarus no usa set level. Se coloca directamente en nivel 15 con `_qvar1 = 2`. El jugador habla con Lazarus (NPC hostil), se vuelve agresivo, lo mata, y la pentagrama se activa para ir a nivel 16.
+
+### Flujo del mod (SP y MP — unificado)
+
+El mod usa el flujo SP para ambos modos. La quest se activa con Staff + Cain en ambos casos.
+
+1. **Nivel 6**: Se genera el **pedestal del Staff** (`OBJ_LAZSTAND`) — `AddLazStand()` ahora funciona en MP también
+2. Jugador interactúa con el pedestal → obtiene el **Staff of Lazarus**
+3. **Pueblo**: Jugador habla con **Cain** → Cain toma el Staff → `_qactive = QUEST_ACTIVE`, `_qvar1 = 2` → `NetSendCmdQuest()` sincroniza para todos los jugadores en MP
+4. **Nivel 6**: `CheckQuests()` detecta `_qactive == QUEST_ACTIVE && _qvar2 == 0` → genera **portal rojo** en la pentagrama
+5. Jugador pisa el portal rojo → `CheckQuests()` envía a `SL_VILEBETRAYER`
+6. Dentro: Lazarus se coloca via `PlaceUniqueMonst()`. `_qvar1 <= 3` → Lazarus inicia diálogo (`LazarusAi()` rama MP, línea 2799)
+7. Habla con Lazarus → `MonsterTalk()` → `_qvar1 = 6` → Lazarus se vuelve hostil
+8. Mata a Lazarus → `_qactive = QUEST_DONE`, `_qvar1 = 7`. Se buscan pentagramas (tile 369) → `WM_DIABNEXTLVL`
+9. Portal rojo dentro del set level → vuelve a nivel 6
+10. Pentagrama tiene `WM_DIABNEXTLVL` → lleva a nivel 7 (Diablo)
+11. `CheckQuests()` no intercepta porque `_qactive == QUEST_DONE`
+
+### Cambios por archivo
+
+#### `objects.cpp` (~línea 4044)
+
+```cpp
+// ANTES:
+if (Quests[Q_BETRAYER].IsAvailable() && !UseMultiplayerQuests())
+    AddLazStand();
+
+// DESPUÉS:
+if (Quests[Q_BETRAYER].IsAvailable())
+    AddLazStand();
+```
+
+El pedestal del Staff ahora se genera en MP también.
+
+#### `quests.cpp` InitQuests() (~línea 269)
+
+```cpp
+// ANTES:
+if (UseMultiplayerQuests())
+    Quests[Q_BETRAYER]._qvar1 = 2;
+
+// DESPUÉS: eliminado. _qvar1 empieza en 0 (default).
+```
+
+La quest no se pre-activa en MP — necesita el Staff + Cain.
+
+#### `quests.cpp` ResyncMPQuests() (~línea 565)
+
+```cpp
+// ANTES:
+auto &betrayerQuest = Quests[Q_BETRAYER];
+if (betrayerQuest._qactive == QUEST_INIT && currlevel == betrayerQuest._qlevel - 1) {
+    betrayerQuest._qactive = QUEST_ACTIVE;
+    NetSendCmdQuest(true, betrayerQuest);
+}
+if (betrayerQuest.IsAvailable())
+    AddObject(OBJ_ALTBOY, SetPiece.position.megaToWorld() + Displacement { 4, 6 });
+
+// DESPUÉS: eliminado completamente. La quest se activa solo via Cain + Staff.
+```
+
+- Auto-activate al pasar por nivel 5: eliminado
+- Altar decorativo (`OBJ_ALTBOY`) en nivel 6: eliminado — el altar no tiene función en el nuevo flujo
+
+#### `quests.cpp` CheckQuests() (~línea 287)
+
+```cpp
+// ANTES:
+if (quest.IsAvailable() && UseMultiplayerQuests() && quest._qvar1 == 2) {
+    AddObject(OBJ_ALTBOY, ...);
+    quest._qvar1 = 3;
+    NetSendCmdQuest(true, quest);
+}
+
+// DESPUÉS: eliminado. El altar ya no se coloca en nivel 6.
+```
+
+El portal rojo se genera con el código que ya existía (rama MP, `_qactive == QUEST_ACTIVE && _qvar2 == 0`).
+
+#### `towners.cpp` TalkToStoryteller() (~línea 554)
+
+```cpp
+// ANTES (rama MP):
+} else {
+    if (betrayerQuest._qactive == QUEST_ACTIVE && !betrayerQuest._qlog) {
+        InitQTextMsg(TEXT_VILE1);
+        betrayerQuest._qlog = true;
+        NetSendCmdQuest(true, betrayerQuest);
+        return;
+    }
+}
+
+// DESPUÉS (rama MP):
+} else {
+    if (betrayerQuest._qactive == QUEST_INIT && RemoveInventoryItemById(player, IDI_LAZSTAFF)) {
+        InitQTextMsg(TEXT_VILE1);
+        betrayerQuest._qlog = true;
+        betrayerQuest._qactive = QUEST_ACTIVE;
+        betrayerQuest._qvar1 = 2;
+        NetSendCmdQuest(true, betrayerQuest);
+        return;
+    }
+    if (betrayerQuest._qactive == QUEST_ACTIVE && !betrayerQuest._qlog) {
+        InitQTextMsg(TEXT_VILE1);
+        betrayerQuest._qlog = true;
+        NetSendCmdQuest(true, betrayerQuest);
+        return;
+    }
+}
+```
+
+Ahora Cain acepta el Staff en MP (igual que SP) y activa la quest. `NetSendCmdQuest()` sincroniza el estado para todos los jugadores.
+
+### Sincronización en multiplayer
+
+| Evento | Mecanismo | Sincronizado para todos? |
+|---|---|---|
+| Staff en pedestal | `SpawnQuestItem()` → `CMD_DELTAITEMS` | Sí |
+| Agarrar Staff | Item pickup estándar | Un jugador lo tiene |
+| Hablar con Cain | `NetSendCmdQuest()` | Sí — quest activada para todos |
+| Portal rojo | `AddMissile(RedPortal)` → `CMD_SPAWNMISSILE` | Sí |
+| Entrar al set level | `StartNewLvl(WM_DIABSETLVL)` | Individual (cada jugador entra por separado) |
+| Lazarus diálogo | `NetSendCmdQuest()` | Sí |
+| Matar a Lazarus | `NetSendCmdQuest()` | Sí |
+| Volver + pentagrama | `InitL4Triggers()` local | Sí (mismos tiles para todos) |

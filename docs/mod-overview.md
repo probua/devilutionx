@@ -161,3 +161,17 @@ Eliminadas via `QUEST_NOTAVAIL` forzado en `InitQuests()`.
   - `monster.cpp`: Eliminada colocación directa de Leoric en nivel 2 (MP) y Lazarus+esbirros en nivel 6 (MP). Solo se colocan dentro de sus respectivos set levels (`SL_SKELKING`, `SL_VILEBETRAYER`)
   - `quests.cpp`: Agregado `quest._qactive != QUEST_DONE` en ambas ramas (SP y MP) de `CheckQuests()` — evita re-entrar a set levels completados
 - **Detalle:** Ver `mod-etapa-4-quests.md` sección "Set levels fix en multiplayer"
+
+### 2025-05-25: Lazarus quest flow — Staff of Lazarus + portal rojo en MP
+
+- **Bug:** En MP, Lazarus no aparecía en ningún lado (se eliminó su colocación directa en nivel 6) y no había forma de entrar a Lazarus Lair
+- **Causa:** El juego original MP no usa set level para Lazarus — lo coloca directamente en el nivel. Al eliminar eso para usar set level (como SP), se rompió el flujo completo de activación de la quest
+- **Fix completo (5 archivos):**
+  - `objects.cpp`: Pedestal del Staff (`AddLazStand()`) ahora se genera en MP también (antes solo SP)
+  - `quests.cpp` InitQuests(): Eliminado `_qvar1 = 2` en MP — la quest empieza desactivada (necesita Staff + Cain)
+  - `quests.cpp` ResyncMPQuests(): Eliminado auto-activate de Q_BETRAYER al pasar por nivel 5 + eliminado altar decorativo (`OBJ_ALTBOY`)
+  - `quests.cpp` CheckQuests(): Eliminado altar (`OBJ_ALTBOY`) de nivel 6 + portal rojo se genera cuando `_qvar2 == 0` y `_qactive == QUEST_ACTIVE`
+  - `towners.cpp` TalkToStoryteller(): Cain ahora acepta el Staff of Lazarus en MP y activa la quest (igual que SP)
+- **Flujo resultante:** Staff en nivel 6 → hablar con Cain → portal rojo en pentagrama → Lazarus Lair → matar Lazarus → volver → pentagrama lleva a nivel 7
+- **Sincronización MP:** Un jugador habla con Cain → `NetSendCmdQuest()` sincroniza para todos. Mismos mecanismos que SP.
+- **Detalle:** Ver `mod-etapa-4-quests.md` sección "Lazarus quest flow completo (Staff + Cain + portal rojo)"

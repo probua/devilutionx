@@ -4041,7 +4041,7 @@ void InitObjects()
 				AddBookLever(OBJ_STEELTOME, SetPiece, spId);
 				LoadMapObjects("levels\\l4data\\warlord.dun", SetPiece.position.megaToWorld());
 			}
-			if (Quests[Q_BETRAYER].IsAvailable() && !UseMultiplayerQuests())
+			if (Quests[Q_BETRAYER].IsAvailable())
 				AddLazStand();
 			InitRndBarrels();
 			AddL4Goodies();

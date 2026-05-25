@@ -552,6 +552,14 @@ void TalkToStoryteller(Player &player, Towner & /*storyteller*/)
 			return;
 		}
 	} else {
+		if (betrayerQuest._qactive == QUEST_INIT && RemoveInventoryItemById(player, IDI_LAZSTAFF)) {
+			InitQTextMsg(TEXT_VILE1);
+			betrayerQuest._qlog = true;
+			betrayerQuest._qactive = QUEST_ACTIVE;
+			betrayerQuest._qvar1 = 2;
+			NetSendCmdQuest(true, betrayerQuest);
+			return;
+		}
 		if (betrayerQuest._qactive == QUEST_ACTIVE && !betrayerQuest._qlog) {
 			InitQTextMsg(TEXT_VILE1);
 			betrayerQuest._qlog = true;
