@@ -175,3 +175,29 @@ Eliminadas via `QUEST_NOTAVAIL` forzado en `InitQuests()`.
 - **Flujo resultante:** Staff en nivel 6 → hablar con Cain → portal rojo en pentagrama → Lazarus Lair → matar Lazarus → volver → pentagrama lleva a nivel 7
 - **Sincronización MP:** Un jugador habla con Cain → `NetSendCmdQuest()` sincroniza para todos. Mismos mecanismos que SP.
 - **Detalle:** Ver `mod-etapa-4-quests.md` sección "Lazarus quest flow completo (Staff + Cain + portal rojo)"
+
+### 2025-05-25: Lazarus Lair MP hotfixes (5 fixes)
+
+- **Bug:** Múltiples problemas en el flujo de Lazarus Lair en multiplayer
+- **Fixes:**
+  1. Portal rojo: `_qvar1 = 3` al spawn del portal → permite entrada al set level (`quests.cpp:293`)
+  2. Lazarus no ataca: `_qvar1 <= 3` → `_qvar1 == 4` en `LazarusAi()` → Lazarus inicia diálogo solo en el estado correcto (`monster.cpp:2801`)
+  3. Sala trasera no revelada: `ObjChangeMap(1,18,20,24)` + `RedoPlayerVision()` en `MonsterTalk()` Lazarus MP (`monster.cpp:1427`)
+  4. Salida Lazarus Lair: `dPiece==369` (no existe en Cathedral) reemplazado por `InitVPTriggers()` + RedPortal en (35,32) (`quests.cpp:419`)
+  5. Entradas de set levels: eliminado early return en `ForceQuests()` MP → labels visibles al cursor (`quests.cpp:370`)
+- **Detalle:** Ver `mod-etapa-4-quests.md` sección "Lazarus Lair MP hotfixes"
+
+### 2025-05-25: Pentagrama blanca/roja prematura en nivel 6 MP
+
+- **Bug:** La pentagrama de Diablo en nivel 6 aparecía con sprite abierto desde el inicio en MP, antes de completar Lazarus
+- **Causa:** `isGateOpen = UseMultiplayerQuests() || Quests[Q_DIABLO]._qactive == QUEST_ACTIVE` — `UseMultiplayerQuests()` siempre true en MP
+- **Fix:** Eliminado `UseMultiplayerQuests()` de la condición — solo depende de `Quests[Q_DIABLO]._qactive` (`drlg_l4.cpp:1183`)
+- **Detalle:** Ver `mod-etapa-6-mazmorras.md` sección "Bug fix: Pentagrama blanca/roja prematura"
+
+### 2025-05-25: Flash spell — misil permanente
+
+- **Bug:** Flash causaba sprite cortado + invulnerabilidad eterna al jugador
+- **Causa:** `AddFlashBottom()` no inicializaba `_mirange` → misil nunca se eliminaba → colisión permanente
+- **Fix:** `missile._mirange = 19` en `AddFlashBottom()` (`missiles.cpp:2057`)
+- **Nota:** Bug de devilutionX original, no del mod
+- **Detalle:** Ver `mod-fix-flash-spell.md`

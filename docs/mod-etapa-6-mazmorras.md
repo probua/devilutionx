@@ -178,3 +178,31 @@ case 4:
 ```
 
 `LoadQuestSetPieces()` no necesitó cambio — usa `IsAvailable()` que ya verifica `_qlevel == currlevel` dinámicamente.
+
+## Bug fix: Pentagrama blanca/roja prematura en nivel 6 MP
+
+### Problema
+
+En multiplayer, la pentagrama de Diablo en nivel 6 aparecía con sprite blanco/rojo desde el inicio del nivel, antes de que la quest de Diablo estuviera activa. El jugador podía ver la entrada a Diablo sin haber completado Lazarus.
+
+### Causa
+
+`drlg_l4.cpp` `GenerateLevel()` verificaba si la pentagrama debía dibujarse con el sprite de "gate open":
+
+```cpp
+bool isGateOpen = UseMultiplayerQuests() || Quests[Q_DIABLO]._qactive == QUEST_ACTIVE;
+```
+
+`UseMultiplayerQuests()` siempre retorna `true` en MP, así que la pentagrama se dibujaba como abierta desde el inicio, independientemente del estado de la quest.
+
+### Fix (commit `613598965`)
+
+```cpp
+// ANTES:
+bool isGateOpen = UseMultiplayerQuests() || Quests[Q_DIABLO]._qactive == QUEST_ACTIVE;
+
+// DESPUÉS:
+bool isGateOpen = Quests[Q_DIABLO]._qactive == QUEST_ACTIVE;
+```
+
+Ahora la pentagrama solo se dibuja como abierta cuando la quest de Diablo está activa (tras matar a Lazarus), tanto en SP como en MP. Cuando la quest no está activa, `L4PENTA.place()` dibuja la pentagrama vacía.

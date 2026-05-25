@@ -375,3 +375,126 @@ Ahora Cain acepta el Staff en MP (igual que SP) y activa la quest. `NetSendCmdQu
 | Lazarus diálogo | `NetSendCmdQuest()` | Sí |
 | Matar a Lazarus | `NetSendCmdQuest()` | Sí |
 | Volver + pentagrama | `InitL4Triggers()` local | Sí (mismos tiles para todos) |
+
+## Lazarus Lair MP hotfixes (commit `b3fb3f3ec`)
+
+Después de implementar el flujo unificado Staff+Cain+portal, surgieron 4 bugs adicionales específicos de multiplayer en Lazarus Lair.
+
+### Fix 1: Portal rojo no permitía entrada al set level
+
+**Bug:** El portal rojo aparecía visualmente en la pentagrama, pero al pisarlo no pasaba nada — el jugador no entraba a `SL_VILEBETRAYER`.
+
+**Causa:** `CheckQuests()` verifica `(quest._qidx != Q_BETRAYER || quest._qvar1 >= 3)` antes de enviar al set level. El portal rojo se generaba con `_qvar2 = 1` pero `_qvar1` nunca se actualizaba a 3.
+
+**Fix en `quests.cpp` CheckQuests() (~línea 291):**
+
+```cpp
+// ANTES:
+AddMissile(quest.position, quest.position, Direction::South, MissileID::RedPortal, ...);
+quest._qvar2 = 1;
+
+// DESPUÉS:
+AddMissile(quest.position, quest.position, Direction::South, MissileID::RedPortal, ...);
+quest._qvar2 = 1;
+quest._qvar1 = 3;
+```
+
+### Fix 2: Lazarus no atacaba en Lazarus Lair
+
+**Bug:** Al entrar a Lazarus Lair en MP, Lazarus permanecía estático e iniciaba su diálogo en loop, pero nunca se volvía hostil.
+
+**Causa:** `LazarusAi()` verificaba `_qvar1 <= 3` para iniciar diálogo. Pero después del Fix 1, `_qvar1` ya era 3 al entrar al set level, y `MonsterTalk()` lo subía a 6 tras el diálogo. Sin embargo, la condición `_qvar1 <= 3` hacía que Lazarus intentara reiniciar diálogo cuando `_qvar1` ya era 6 (nunca era <= 3).
+
+En realidad el problema era que la condición correcta debía ser `_qvar1 == 4` (el estado intermedio entre el portal activado y el diálogo completado), que es el momento en que Lazarus debe mostrar su texto inicial.
+
+**Fix en `monster.cpp` LazarusAi() (~línea 2801):**
+
+```cpp
+// ANTES:
+if (UseMultiplayerQuests() && monster.talkMsg == TEXT_VILE13
+    && monster.goal == MonsterGoal::Inquiring
+    && Quests[Q_BETRAYER]._qvar1 <= 3) {
+
+// DESPUÉS:
+if (UseMultiplayerQuests() && monster.talkMsg == TEXT_VILE13
+    && monster.goal == MonsterGoal::Inquiring
+    && Quests[Q_BETRAYER]._qvar1 == 4) {
+```
+
+### Fix 3: Sala trasera de Lazarus no se revelaba
+
+**Bug:** Al completar el diálogo de Lazarus en MP, la habitación secreta donde aparecen los portales de salida no se revelaba — quedaba en oscuro, invisible para el jugador.
+
+**Causa:** En SP, la sala se revela via el flujo normal de `MonsterTalk()` que incluye `ObjChangeMap()`. En MP, `MonsterTalk()` saltaba directamente a `_qvar1 = 6` sin ejecutar los cambios de mapa.
+
+**Fix en `monster.cpp` MonsterTalk() (~línea 1427):**
+
+```cpp
+// ANTES:
+if (monster.uniqueType == UniqueMonsterType::Lazarus && UseMultiplayerQuests()) {
+    Quests[Q_BETRAYER]._qvar1 = 6;
+    monster.goal = MonsterGoal::Normal;
+    ...
+}
+
+// DESPUÉS:
+if (monster.uniqueType == UniqueMonsterType::Lazarus && UseMultiplayerQuests()) {
+    ObjChangeMap(1, 18, 20, 24);
+    RedoPlayerVision();
+    Quests[Q_BETRAYER]._qvar1 = 6;
+    monster.goal = MonsterGoal::Normal;
+    ...
+}
+```
+
+`ObjChangeMap(1, 18, 20, 24)` aplica los cambios de mapa para revelar las paredes de la habitación (coordenadas del set level `SL_VILEBETRAYER`). `RedoPlayerVision()` recalcula la visión del jugador.
+
+### Fix 4: Salida de Lazarus Lair — portal de regreso
+
+**Bug:** Al matar a Lazarus en MP, no aparecía forma de volver a nivel 6. La pentagrama roja no se generaba.
+
+**Causa:** `CheckQuestKill()` para Lazarus en MP buscaba tiles con `dPiece == 369` (pentagrama de Hell/L4) para registrar triggers de salida. Pero `SL_VILEBETRAYER` usa tileset Cathedral (L1), no Hell (L4) — el tile 369 no existe ahí.
+
+**Fix en `quests.cpp` CheckQuestKill() (~línea 419):**
+
+```cpp
+// ANTES:
+if (UseMultiplayerQuests()) {
+    for (WorldTileCoord j = 0; j < MAXDUNY; j++) {
+        for (WorldTileCoord i = 0; i < MAXDUNX; i++) {
+            if (dPiece[i][j] == 369) {
+                trigs[numtrigs].position = { i, j };
+                trigs[numtrigs]._tmsg = WM_DIABNEXTLVL;
+                numtrigs++;
+            }
+        }
+    }
+}
+
+// DESPUÉS:
+if (UseMultiplayerQuests()) {
+    InitVPTriggers();
+    betrayerQuest._qvar2 = 4;
+    AddMissile({ 35, 32 }, { 35, 32 }, Direction::South,
+               MissileID::RedPortal, TARGET_MONSTERS, MyPlayerId, 0, 0);
+}
+```
+
+`InitVPTriggers()` busca los triggers correctos del set level (independiente del tileset). El portal rojo se genera en la posición fija `(35, 32)` dentro de Lazarus Lair.
+
+### Fix 5: Entradas de set levels visibles en MP
+
+**Bug:** Las entradas a set levels (tumba de Leoric, Lazarus Lair) no mostraban etiquetas al pasar el cursor — parecían tiles normales.
+
+**Causa:** `ForceQuests()` tenía un early return `if (UseMultiplayerQuests()) return false;` que impedía registrar las posiciones de entrada como interactivas.
+
+**Fix en `quests.cpp` ForceQuests() (~línea 370):**
+
+```cpp
+// ANTES:
+if (UseMultiplayerQuests()) {
+    return false;
+}
+
+// DESPUÉS: eliminado. El código continúa y registra las entradas de set levels.
+```
