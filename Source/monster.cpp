@@ -1425,6 +1425,8 @@ void MonsterTalk(Monster &monster)
 		NetSendCmdQuest(true, Quests[Q_WARLORD]);
 	}
 	if (monster.uniqueType == UniqueMonsterType::Lazarus && UseMultiplayerQuests()) {
+		ObjChangeMap(1, 18, 20, 24);
+		RedoPlayerVision();
 		Quests[Q_BETRAYER]._qvar1 = 6;
 		monster.goal = MonsterGoal::Normal;
 		monster.activeForTicks = UINT8_MAX;
@@ -2796,7 +2798,7 @@ void LazarusAi(Monster &monster)
 			}
 		}
 
-		if (UseMultiplayerQuests() && monster.talkMsg == TEXT_VILE13 && monster.goal == MonsterGoal::Inquiring && Quests[Q_BETRAYER]._qvar1 <= 3) {
+		if (UseMultiplayerQuests() && monster.talkMsg == TEXT_VILE13 && monster.goal == MonsterGoal::Inquiring && Quests[Q_BETRAYER]._qvar1 == 4) {
 			monster.mode = MonsterMode::Talk;
 		}
 	}

@@ -290,6 +290,7 @@ void CheckQuests()
 		    && quest._qvar2 == 0) {
 			AddMissile(quest.position, quest.position, Direction::South, MissileID::RedPortal, TARGET_MONSTERS, MyPlayerId, 0, 0);
 			quest._qvar2 = 1;
+			quest._qvar1 = 3;
 		}
 
 		if (!setlevel && MyPlayer->_pmode == PM_STAND) {
@@ -422,15 +423,9 @@ void CheckQuestKill(const Monster &monster, bool sendmsg)
 		diabloQuest._qactive = QUEST_ACTIVE;
 
 		if (UseMultiplayerQuests()) {
-			for (WorldTileCoord j = 0; j < MAXDUNY; j++) {
-				for (WorldTileCoord i = 0; i < MAXDUNX; i++) {
-					if (dPiece[i][j] == 369) {
-						trigs[numtrigs].position = { i, j };
-						trigs[numtrigs]._tmsg = WM_DIABNEXTLVL;
-						numtrigs++;
-					}
-				}
-			}
+			InitVPTriggers();
+			betrayerQuest._qvar2 = 4;
+			AddMissile({ 35, 32 }, { 35, 32 }, Direction::South, MissileID::RedPortal, TARGET_MONSTERS, MyPlayerId, 0, 0);
 		} else {
 			InitVPTriggers();
 			betrayerQuest._qvar2 = 4;
