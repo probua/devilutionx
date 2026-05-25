@@ -2449,17 +2449,15 @@ void AddPlrExperience(Player &player, int lvl, int exp)
 		return;
 	}
 
-	// Adjust xp based on difference in level between player and monster
-	uint32_t clampedExp = std::max(static_cast<int>(exp * ExperienceMultiplier * (1 + (lvl - player._pLevel) / 10.0)), 0);
-
-	// Prevent power leveling
+	// Prevent power leveling (cap on base XP before multiplier)
 	if (gbIsMultiplayer) {
 		const uint32_t clampedPlayerLevel = clamp(static_cast<int>(player._pLevel), 1, MaxCharacterLevel);
-
-		// for low level characters experience gain is capped to 1/20 of current levels xp
-		// for high level characters experience gain is capped to 200 * current level - this is a smaller value than 1/20 of the exp needed for the next level after level 5.
-		clampedExp = std::min({ clampedExp, /* level 0-5: */ ExpLvlsTbl[clampedPlayerLevel] / 20U, /* level 6-50: */ 200U * clampedPlayerLevel });
+		uint32_t mpCap = std::min({ static_cast<uint32_t>(exp), ExpLvlsTbl[clampedPlayerLevel] / 20U, 200U * clampedPlayerLevel });
+		exp = static_cast<int>(mpCap);
 	}
+
+	// Adjust xp based on difference in level between player and monster, then apply multiplier
+	uint32_t clampedExp = std::max(static_cast<int>(exp * ExperienceMultiplier * (1 + (lvl - player._pLevel) / 10.0)), 0);
 
 	const uint32_t MaxExperience = ExpLvlsTbl[MaxCharacterLevel - 1];
 

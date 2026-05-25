@@ -3814,13 +3814,13 @@ void InitObjectGFX()
 {
 	uint16_t filesWidths[65] = {};
 
-	if (IsAnyOf(currlevel, 4, 8, 12)) {
+	if (IsAnyOf(currlevel, 2, 4, 6)) {
 		filesWidths[OFILE_BKSLBRNT] = AllObjects[OBJ_STORYBOOK].animWidth;
 		filesWidths[OFILE_CANDLE2] = AllObjects[OBJ_STORYCANDLE].animWidth;
 	}
 
 	for (const ObjectData objectData : AllObjects) {
-		if (objectData.minlvl != 0 && currlevel >= objectData.minlvl && currlevel <= objectData.maxlvl) {
+		if (objectData.minlvl != 0 && GetVirtualLevel() >= objectData.minlvl && GetVirtualLevel() <= objectData.maxlvl) {
 			if (IsAnyOf(objectData.ofindex, OFILE_TRAPHOLE, OFILE_TRAPHOLE) && leveltype == DTYPE_HELL) {
 				continue;
 			}
