@@ -2055,6 +2055,7 @@ void AddFlashBottom(Missile &missile, AddMissileParameter & /*parameter*/)
 	}
 
 	missile._midam = std::max(missile._midam, 1);
+	missile._mirange = 19;
 }
 
 void AddFlashTop(Missile &missile, AddMissileParameter & /*parameter*/)
