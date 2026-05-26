@@ -1,0 +1,26 @@
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+    g++-mingw-w64-x86-64 \
+    gcc-mingw-w64-x86-64 \
+    cmake \
+    make \
+    wget \
+    git \
+    ca-certificates \
+    pkg-config \
+    libz-mingw-w64-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Verify GCC version
+RUN x86_64-w64-mingw32-g++ --version
+
+# Install SDL2 and libsodium for MinGW
+WORKDIR /tmp/mingw-setup
+COPY Packaging/windows/mingw-prep64.sh .
+RUN bash mingw-prep64.sh && \
+    rm -rf /tmp/mingw-setup
+
+WORKDIR /work
