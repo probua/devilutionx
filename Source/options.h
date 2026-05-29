@@ -546,8 +546,6 @@ struct GameplayOptions : OptionCategoryBase {
 	OptionEntryBoolean cowQuest;
 	/** @brief Will players still damage other players in non-PvP mode. */
 	OptionEntryBoolean friendlyFire;
-	/** @brief Enables the full/uncut singleplayer version of quests. */
-	OptionEntryBoolean multiplayerFullQuests;
 	/** @brief Enable the bard hero class. */
 	OptionEntryBoolean testBard;
 	/** @brief Enable the babarian hero class. */
@@ -582,8 +580,6 @@ struct GameplayOptions : OptionCategoryBase {
 	OptionEntryBoolean autoEquipShields;
 	/** @brief Automatically attempt to equip jewelry-type items when picking them up. */
 	OptionEntryBoolean autoEquipJewelry;
-	/** @brief Only enable 2/3 quests in each game session */
-	OptionEntryBoolean randomizeQuests;
 	/** @brief Indicates whether or not monster type (Animal, Demon, Undead) is shown along with other monster information. */
 	OptionEntryBoolean showMonsterType;
 	/** @brief Displays item labels for items on the ground.  */

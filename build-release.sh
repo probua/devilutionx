@@ -85,7 +85,8 @@ build_linux() {
 	cmake -S. -B"$BUILD_LINUX" \
 		-DCMAKE_BUILD_TYPE=Release \
 		-DCPACK=ON \
-		-DCMAKE_INSTALL_PREFIX=/usr
+		-DCMAKE_INSTALL_PREFIX=/usr \
+		-DBUILD_TESTING=OFF
 	cmake --build "$BUILD_LINUX" -j"$JOBS" --target package
 
 	step "Collecting Linux artifacts"

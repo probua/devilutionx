@@ -98,7 +98,6 @@ struct {
 	bool autoEquipHelms = false;
 	bool autoEquipShields = false;
 	bool autoEquipJewelry = false;
-	bool randomizeQuests = false;
 	bool showItemLabels = false;
 	bool autoRefillBelt = false;
 	bool disableCripplingShrines = false;
@@ -138,7 +137,6 @@ void ReadSettings(FILE *in, uint8_t version)
 		DemoSettings.autoEquipHelms = ReadByte(in) != 0;
 		DemoSettings.autoEquipShields = ReadByte(in) != 0;
 		DemoSettings.autoEquipJewelry = ReadByte(in) != 0;
-		DemoSettings.randomizeQuests = ReadByte(in) != 0;
 		DemoSettings.showItemLabels = ReadByte(in) != 0;
 		DemoSettings.autoRefillBelt = ReadByte(in) != 0;
 		DemoSettings.disableCripplingShrines = ReadByte(in) != 0;
@@ -170,7 +168,6 @@ void WriteSettings(FILE *out)
 	WriteByte(out, *sgOptions.Gameplay.autoEquipHelms);
 	WriteByte(out, *sgOptions.Gameplay.autoEquipShields);
 	WriteByte(out, *sgOptions.Gameplay.autoEquipJewelry);
-	WriteByte(out, *sgOptions.Gameplay.randomizeQuests);
 	WriteByte(out, *sgOptions.Gameplay.showItemLabels);
 	WriteByte(out, *sgOptions.Gameplay.autoRefillBelt);
 	WriteByte(out, *sgOptions.Gameplay.disableCripplingShrines);
@@ -513,7 +510,6 @@ void OverrideOptions()
 	sgOptions.Gameplay.autoEquipHelms.SetValue(DemoSettings.autoEquipHelms);
 	sgOptions.Gameplay.autoEquipShields.SetValue(DemoSettings.autoEquipShields);
 	sgOptions.Gameplay.autoEquipJewelry.SetValue(DemoSettings.autoEquipJewelry);
-	sgOptions.Gameplay.randomizeQuests.SetValue(DemoSettings.randomizeQuests);
 	sgOptions.Gameplay.showItemLabels.SetValue(DemoSettings.showItemLabels);
 	sgOptions.Gameplay.autoRefillBelt.SetValue(DemoSettings.autoRefillBelt);
 	sgOptions.Gameplay.disableCripplingShrines.SetValue(DemoSettings.disableCripplingShrines);

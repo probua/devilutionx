@@ -246,10 +246,6 @@ void InitQuests()
 		}
 	}
 
-	if (!UseMultiplayerQuests() && *sgOptions.Gameplay.randomizeQuests) {
-		InitialiseQuestPools(glSeedTbl[6], Quests);
-	}
-
 	// Mod: disable quests not included in the 7-level mod
 	for (quest_id disabledQuest : { Q_ROCK, Q_MUSHROOM, Q_GARBUD, Q_ZHAR, Q_VEIL, Q_LTBANNER, Q_PWATER, Q_WARLORD, Q_SCHAMB }) {
 		Quests[disabledQuest]._qactive = QUEST_NOTAVAIL;
@@ -268,12 +264,6 @@ void InitQuests()
 	Quests[Q_LTBANNER]._qvar1 = 1;
 	if (gbIsMultiplayer && Quests[Q_MUSHROOM]._qactive == QUEST_INIT)
 		Quests[Q_MUSHROOM]._qvar1 = QS_TOMESPAWNED;
-}
-
-void InitialiseQuestPools(uint32_t seed, Quest quests[])
-{
-	SetRndSeed(seed);
-	quests[PickRandomlyAmong({ Q_SKELKING, Q_PWATER })]._qactive = QUEST_NOTAVAIL;
 }
 
 void CheckQuests()
