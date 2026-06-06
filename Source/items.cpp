@@ -658,10 +658,8 @@ void GetBookSpell(Item &item, int lvl)
 			if (s == static_cast<int8_t>(SpellID::Resurrect))
 				s = static_cast<int8_t>(SpellID::Telekinesis);
 		}
-		if (!gbIsMultiplayer) {
-			if (s == static_cast<int8_t>(SpellID::HealOther))
-				s = static_cast<int8_t>(SpellID::BloodStar);
-		}
+		if (s == static_cast<int8_t>(SpellID::HealOther))
+			s = static_cast<int8_t>(SpellID::BloodStar);
 		if (s == maxSpells)
 			s = 1;
 	}
@@ -1303,7 +1301,7 @@ void GetStaffSpell(const Player &player, Item &item, int lvl, bool onlygood)
 		s++;
 		if (!gbIsMultiplayer && s == static_cast<int8_t>(SpellID::Resurrect))
 			s = static_cast<int8_t>(SpellID::Telekinesis);
-		if (!gbIsMultiplayer && s == static_cast<int8_t>(SpellID::HealOther))
+		if (s == static_cast<int8_t>(SpellID::HealOther))
 			s = static_cast<int8_t>(SpellID::BloodStar);
 		if (s == maxSpells)
 			s = static_cast<int8_t>(SpellID::Firebolt);
@@ -4127,6 +4125,14 @@ void UseItem(size_t pnum, item_misc_id mid, SpellID spellID, int spellFrom)
 		if (newSpellLevel <= MaxSpellLevel) {
 			player._pSplLvl[static_cast<int8_t>(spellID)] = newSpellLevel;
 			NetSendCmdParam2(true, CMD_CHANGE_SPELL_LEVEL, static_cast<uint16_t>(spellID), newSpellLevel);
+		}
+		if (spellID == SpellID::Healing) {
+			SpellID healOther = SpellID::HealOther;
+			uint8_t healOtherLevel = player._pSplLvl[static_cast<int8_t>(healOther)] + 1;
+			if (healOtherLevel <= MaxSpellLevel) {
+				player._pSplLvl[static_cast<int8_t>(healOther)] = healOtherLevel;
+				NetSendCmdParam2(true, CMD_CHANGE_SPELL_LEVEL, static_cast<uint16_t>(healOther), healOtherLevel);
+			}
 		}
 		if (HasNoneOf(player._pIFlags, ItemSpecialEffect::NoMana)) {
 			player._pMana += GetSpellData(spellID).sManaCost << 6;
