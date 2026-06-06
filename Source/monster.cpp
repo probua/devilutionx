@@ -73,6 +73,9 @@ size_t totalmonsters;
 int monstimgtot;
 int uniquetrans;
 
+/** Type index for skeleton minions (registered in GetLevelMTypes) */
+size_t skeletonTypeIndex;
+
 constexpr const std::array<_monster_id, 12> SkeletonTypes {
 	MT_WSKELAX,
 	MT_TSKELAX,
@@ -3211,6 +3214,7 @@ void InitLevelMonsters()
 void GetLevelMTypes()
 {
 	AddMonsterType(MT_GOLEM, PLACE_SPECIAL);
+	skeletonTypeIndex = AddMonsterType(MT_WSKELAX, PLACE_SPECIAL);
 	if (currlevel == 7) {
 		AddMonsterType(MT_ADVOCATE, PLACE_SCATTER);
 		AddMonsterType(MT_RBLACK, PLACE_SCATTER);
@@ -3455,6 +3459,14 @@ void InitGolems()
 	if (!setlevel) {
 		for (int i = 0; i < MAX_PLRS; i++)
 			AddMonster(GolemHoldingCell, Direction::South, 0, false);
+	}
+}
+
+void InitSkeletons()
+{
+	if (!setlevel) {
+		for (int i = 0; i < MAX_PLRS; i++)
+			AddMonster(GolemHoldingCell, Direction::South, skeletonTypeIndex, false);
 	}
 }
 
@@ -3715,6 +3727,16 @@ void KillMyGolem()
 	M_StartKill(golem, *MyPlayer);
 }
 
+void KillMySkeleton()
+{
+	Monster &skeleton = Monsters[MAX_PLRS + MyPlayerId];
+	if (skeleton.position.tile == GolemHoldingCell)
+		return;
+	delta_kill_monster(skeleton, skeleton.position.tile, *MyPlayer);
+	NetSendCmdLoc(MyPlayerId, false, CMD_KILLGOLEM, skeleton.position.tile);
+	M_StartKill(skeleton, *MyPlayer);
+}
+
 void M_StartKill(Monster &monster, const Player &player)
 {
 	StartMonsterDeath(monster, player, true);
@@ -3899,7 +3921,11 @@ void GolumAi(Monster &golem)
 	if (golem.pathCount > 8)
 		golem.pathCount = 5;
 
-	if (RandomWalk(golem, Players[golem.getId()]._pdir))
+	size_t ownerId = golem.getId();
+	if (ownerId >= MAX_PLRS)
+		ownerId -= MAX_PLRS;
+
+	if (RandomWalk(golem, Players[ownerId]._pdir))
 		return;
 
 	Direction md = Left(golem.direction);
@@ -3922,6 +3948,17 @@ void DeleteMonsterList()
 		golem.position.future = { 0, 0 };
 		golem.position.old = { 0, 0 };
 		golem.isInvalid = false;
+	}
+
+	for (int i = 0; i < MAX_PLRS; i++) {
+		auto &skeleton = Monsters[MAX_PLRS + i];
+		if (!skeleton.isInvalid)
+			continue;
+
+		skeleton.position.tile = GolemHoldingCell;
+		skeleton.position.future = { 0, 0 };
+		skeleton.position.old = { 0, 0 };
+		skeleton.isInvalid = false;
 	}
 
 	for (size_t i = MAX_PLRS; i < ActiveMonsterCount;) {
@@ -4560,6 +4597,34 @@ void SpawnGolem(Player &player, Monster &golem, Point position, Missile &missile
 		    golem.direction,
 		    golem.enemy,
 		    golem.hitPoints,
+		    GetLevelForMultiplayer(player));
+	}
+}
+
+void SpawnSkeleton(Player &player, Monster &skeleton, Point position, Missile &missile)
+{
+	dMonster[position.x][position.y] = skeleton.getId() + 1;
+	skeleton.position.tile = position;
+	skeleton.position.future = position;
+	skeleton.position.old = position;
+	skeleton.pathCount = 0;
+	skeleton.maxHitPoints = 2 * (320 * missile._mispllvl + player._pMaxMana / 3);
+	skeleton.hitPoints = skeleton.maxHitPoints;
+	skeleton.armorClass = 25;
+	skeleton.golemToHit = 5 * (missile._mispllvl + 8) + 2 * player._pLevel;
+	skeleton.minDamage = 2 * (missile._mispllvl + 4);
+	skeleton.maxDamage = 2 * (missile._mispllvl + 8);
+	skeleton.flags |= MFLAG_GOLEM;
+	skeleton.ai = MonsterAIID::Golem;
+	StartSpecialStand(skeleton, Direction::South);
+	UpdateEnemy(skeleton);
+	if (&player == MyPlayer) {
+		NetSendCmdSkeleton(
+		    skeleton.position.tile.x,
+		    skeleton.position.tile.y,
+		    skeleton.direction,
+		    skeleton.enemy,
+		    skeleton.hitPoints,
 		    GetLevelForMultiplayer(player));
 	}
 }

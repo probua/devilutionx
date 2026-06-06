@@ -404,6 +404,10 @@ enum _cmd_id : uint8_t {
 	//
 	// body (TCmdGolem)
 	CMD_AWAKEGOLEM,
+	// Spawn skeleton at target location.
+	//
+	// body (TCmdGolem)
+	CMD_AWAKESKELETON,
 	// Enable mana shield of player (render).
 	//
 	// body (TCmd)
@@ -742,6 +746,7 @@ void DeltaLoadLevel();
 void ClearLastSentPlayerCmd();
 void NetSendCmd(bool bHiPri, _cmd_id bCmd);
 void NetSendCmdGolem(uint8_t mx, uint8_t my, Direction dir, uint8_t menemy, int hp, uint8_t cl);
+void NetSendCmdSkeleton(uint8_t mx, uint8_t my, Direction dir, uint8_t menemy, int hp, uint8_t cl);
 void NetSendCmdLoc(size_t playerId, bool bHiPri, _cmd_id bCmd, Point position);
 void NetSendCmdLocParam1(bool bHiPri, _cmd_id bCmd, Point position, uint16_t wParam1);
 void NetSendCmdLocParam2(bool bHiPri, _cmd_id bCmd, Point position, uint16_t wParam1, uint16_t wParam2);

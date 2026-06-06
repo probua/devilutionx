@@ -170,6 +170,7 @@ string_view CmdIdString(_cmd_id cmd)
 	case CMD_KILLGOLEM: return "CMD_KILLGOLEM";
 	case CMD_SYNCQUEST: return "CMD_SYNCQUEST";
 	case CMD_AWAKEGOLEM: return "CMD_AWAKEGOLEM";
+	case CMD_AWAKESKELETON: return "CMD_AWAKESKELETON";
 	case CMD_SETSHIELD: return "CMD_SETSHIELD";
 	case CMD_REMSHIELD: return "CMD_REMSHIELD";
 	case CMD_SETREFLECT: return "CMD_SETREFLECT";
@@ -689,6 +690,19 @@ void DeltaSyncGolem(const TCmdGolem &message, int pnum, uint8_t level)
 		return;
 
 	DMonsterStr &monster = GetDeltaLevel(level).monster[pnum];
+	monster.position.x = message._mx;
+	monster.position.y = message._my;
+	monster._mactive = UINT8_MAX;
+	monster._menemy = message._menemy;
+	monster.hitPoints = SDL_SwapLE32(message._mhitpoints);
+}
+
+void DeltaSyncSkeleton(const TCmdGolem &message, int pnum, uint8_t level)
+{
+	if (!gbIsMultiplayer)
+		return;
+
+	DMonsterStr &monster = GetDeltaLevel(level).monster[MAX_PLRS + pnum];
 	monster.position.x = message._mx;
 	monster.position.y = message._my;
 	monster._mactive = UINT8_MAX;
@@ -1765,7 +1779,13 @@ size_t OnKillGolem(const TCmd *pCmd, size_t pnum)
 			Monster &monster = Monsters[pnum];
 			if (player.isOnActiveLevel())
 				M_SyncStartKill(monster, position, player);
-			delta_kill_monster(monster, position, player); // BUGFIX: should be p->wParam1, plrlevel will be incorrect if golem is killed because player changed levels
+			delta_kill_monster(monster, position, player);
+
+			Monster &skeleton = Monsters[MAX_PLRS + pnum];
+			if (skeleton.position.tile != GolemHoldingCell && player.isOnActiveLevel())
+				M_SyncStartKill(skeleton, skeleton.position.tile, player);
+			if (skeleton.position.tile != GolemHoldingCell)
+				delta_kill_monster(skeleton, skeleton.position.tile, player);
 		}
 	} else {
 		SendPacket(pnum, &message, sizeof(message));
@@ -1794,6 +1814,31 @@ size_t OnAwakeGolem(const TCmd *pCmd, size_t pnum)
 			}
 
 			AddMissile(player.position.tile, position, message._mdir, MissileID::Golem, TARGET_MONSTERS, pnum, 0, 1);
+		}
+	}
+
+	return sizeof(message);
+}
+
+size_t OnAwakeSkeleton(const TCmd *pCmd, size_t pnum)
+{
+	const auto &message = *reinterpret_cast<const TCmdGolem *>(pCmd);
+	const Point position { message._mx, message._my };
+
+	if (gbBufferMsgs == 1) {
+		SendPacket(pnum, &message, sizeof(message));
+	} else if (InDungeonBounds(position)) {
+		Player &player = Players[pnum];
+		if (!player.isOnActiveLevel()) {
+			DeltaSyncSkeleton(message, pnum, message._currlevel);
+		} else if (&player != MyPlayer) {
+			for (auto &missile : Missiles) {
+				if (missile._mitype == MissileID::Skeleton && &Players[missile._misource] == &player) {
+					return sizeof(message);
+				}
+			}
+
+			AddMissile(player.position.tile, position, message._mdir, MissileID::Skeleton, TARGET_MONSTERS, pnum, 0, 1);
 		}
 	}
 
@@ -2713,6 +2758,9 @@ void DeltaLoadLevel()
 				if (monster.type().type == MT_GOLEM) {
 					GolumAi(monster);
 					monster.flags |= (MFLAG_TARGETS_MONSTER | MFLAG_GOLEM);
+				} else if (i >= MAX_PLRS && i < MAX_PLRS + MAX_PLRS) {
+					GolumAi(monster);
+					monster.flags |= MFLAG_GOLEM;
 				} else {
 					M_StartStand(monster, monster.direction);
 				}
@@ -2808,6 +2856,20 @@ void NetSendCmdGolem(uint8_t mx, uint8_t my, Direction dir, uint8_t menemy, int 
 	TCmdGolem cmd;
 
 	cmd.bCmd = CMD_AWAKEGOLEM;
+	cmd._mx = mx;
+	cmd._my = my;
+	cmd._mdir = dir;
+	cmd._menemy = menemy;
+	cmd._mhitpoints = hp;
+	cmd._currlevel = cl;
+	NetSendLoPri(MyPlayerId, (byte *)&cmd, sizeof(cmd));
+}
+
+void NetSendCmdSkeleton(uint8_t mx, uint8_t my, Direction dir, uint8_t menemy, int hp, uint8_t cl)
+{
+	TCmdGolem cmd;
+
+	cmd.bCmd = CMD_AWAKESKELETON;
 	cmd._mx = mx;
 	cmd._my = my;
 	cmd._mdir = dir;
@@ -3230,6 +3292,8 @@ size_t ParseCmd(size_t pnum, const TCmd *pCmd)
 		return OnKillGolem(pCmd, pnum);
 	case CMD_AWAKEGOLEM:
 		return OnAwakeGolem(pCmd, pnum);
+	case CMD_AWAKESKELETON:
+		return OnAwakeSkeleton(pCmd, pnum);
 	case CMD_MONSTDAMAGE:
 		return OnMonstDamage(pCmd, pnum);
 	case CMD_PLRDEAD:

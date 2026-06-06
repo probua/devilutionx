@@ -2359,6 +2359,30 @@ void AddGolem(Missile &missile, AddMissileParameter &parameter)
 	}
 }
 
+void AddSkeleton(Missile &missile, AddMissileParameter &parameter)
+{
+	missile._miDelFlag = true;
+
+	int playerId = missile._misource;
+	Player &player = Players[playerId];
+	Monster &skeleton = Monsters[MAX_PLRS + playerId];
+
+	if (skeleton.position.tile != GolemHoldingCell && &player == MyPlayer)
+		KillMySkeleton();
+
+	if (skeleton.position.tile == GolemHoldingCell) {
+		std::optional<Point> spawnPosition = FindClosestValidPosition(
+		    [start = missile.position.start](Point target) {
+			    return !IsTileOccupied(target) && LineClearMissile(start, target);
+		    },
+		    parameter.dst, 0, 5);
+
+		if (spawnPosition) {
+			SpawnSkeleton(player, skeleton, *spawnPosition, missile);
+		}
+	}
+}
+
 void AddApocalypseBoom(Missile &missile, AddMissileParameter &parameter)
 {
 	missile.position.tile = parameter.dst;

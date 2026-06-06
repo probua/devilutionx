@@ -2883,6 +2883,17 @@ void RemovePlrMissiles(const Player &player)
 			golem.isInvalid = true;
 			DeleteMonsterList();
 		}
+
+		Monster &skeleton = Monsters[MAX_PLRS + MyPlayerId];
+		if (skeleton.position.tile.x != 1 || skeleton.position.tile.y != 0) {
+			KillMySkeleton();
+			AddCorpse(skeleton.position.tile, skeleton.type().corpseId, skeleton.direction);
+			int mx = skeleton.position.tile.x;
+			int my = skeleton.position.tile.y;
+			dMonster[mx][my] = 0;
+			skeleton.isInvalid = true;
+			DeleteMonsterList();
+		}
 	}
 
 	for (auto &missile : Missiles) {

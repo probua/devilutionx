@@ -336,6 +336,7 @@ void AddAcidPuddle(Missile &missile, AddMissileParameter &parameter);
  */
 void AddStoneCurse(Missile &missile, AddMissileParameter &parameter);
 void AddGolem(Missile &missile, AddMissileParameter &parameter);
+void AddSkeleton(Missile &missile, AddMissileParameter &parameter);
 void AddApocalypseBoom(Missile &missile, AddMissileParameter &parameter);
 void AddHealing(Missile &missile, AddMissileParameter &parameter);
 void AddHealOther(Missile &missile, AddMissileParameter &parameter);

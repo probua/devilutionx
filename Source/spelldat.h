@@ -13,7 +13,7 @@
 
 namespace devilution {
 
-#define MAX_SPELLS 52
+#define MAX_SPELLS 53
 
 enum class SpellType : uint8_t {
 	Skill,
@@ -64,7 +64,8 @@ enum class SpellID : int8_t {
 	HealOther,
 	BloodStar,
 	BoneSpirit,
-	LastDiablo = BoneSpirit,
+	Skeleton,
+	LastDiablo = Skeleton,
 	Mana,
 	Magi,
 	Jester,
@@ -201,6 +202,7 @@ enum class MissileID : int8_t {
 	BlueExplosion,
 	BlueExplosion2,
 	OrangeExplosion,
+	Skeleton,
 	Null = -1,
 	// clang-format on
 };

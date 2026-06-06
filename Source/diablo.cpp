@@ -2843,6 +2843,7 @@ void LoadGameLevel(bool firstflag, lvl_entry lvldir)
 				HoldThemeRooms();
 				[[maybe_unused]] uint32_t mid1Seed = GetLCGEngineState();
 				InitGolems();
+				InitSkeletons();
 				InitObjects();
 				[[maybe_unused]] uint32_t mid2Seed = GetLCGEngineState();
 				IncProgress();
@@ -2864,6 +2865,7 @@ void LoadGameLevel(bool firstflag, lvl_entry lvldir)
 			} else {
 				HoldThemeRooms();
 				InitGolems();
+				InitSkeletons();
 				InitMonsters();
 				InitMissiles();
 				InitCorpses();
@@ -2904,6 +2906,7 @@ void LoadGameLevel(bool firstflag, lvl_entry lvldir)
 		GetLevelMTypes();
 		IncProgress();
 		InitGolems();
+		InitSkeletons();
 		InitMonsters();
 		IncProgress();
 		if (!HeadlessMode) {
