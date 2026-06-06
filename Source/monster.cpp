@@ -68,6 +68,11 @@ constexpr int HellToHitBonus = 120;
 constexpr int NightmareAcBonus = 50;
 constexpr int HellAcBonus = 80;
 
+constexpr int MaxMinionChaseDistance = 4;
+constexpr int MaxMinionReturnDistance = 8;
+constexpr int MinionEngageRange = 5;
+constexpr int MinionIdleDelay = 4;
+
 /** Tracks which missile files are already loaded */
 size_t totalmonsters;
 int monstimgtot;
@@ -1716,6 +1721,19 @@ bool AiPlanWalk(Monster &monster)
 	if (FindPath([&monster](Point position) { return IsTileAccessible(monster, position); }, monster.position.tile, monster.enemyPosition, path) == 0) {
 		return false;
 	}
+
+	RandomWalk(monster, plr2monst[path[0]]);
+	return true;
+}
+
+bool AiPlanPathTo(Monster &monster, Point destination)
+{
+	int8_t path[MaxPathLength];
+
+	static const Direction plr2monst[9] = { Direction::South, Direction::NorthEast, Direction::NorthWest, Direction::SouthEast, Direction::SouthWest, Direction::North, Direction::East, Direction::South, Direction::West };
+
+	if (FindPath([&monster](Point position) { return IsTileAccessible(monster, position); }, monster.position.tile, destination, path) == 0)
+		return false;
 
 	RandomWalk(monster, plr2monst[path[0]]);
 	return true;
@@ -3881,12 +3899,68 @@ void GolumAi(Monster &golem)
 		return;
 	}
 
+	size_t ownerId = golem.getId();
+	if (ownerId >= MAX_PLRS)
+		ownerId -= MAX_PLRS;
+
+	int distToOwner = golem.position.tile.WalkingDistance(Players[ownerId].position.future);
+
+	if (distToOwner > MaxMinionReturnDistance) {
+		if (AiPlanPathTo(golem, Players[ownerId].position.tile))
+			return;
+		Direction towardsOwner = GetDirection(golem.position.tile, Players[ownerId].position.tile);
+		if (RandomWalk(golem, towardsOwner))
+			return;
+		Direction md = Left(towardsOwner);
+		for (int j = 0; j < 8; j++) {
+			md = Right(md);
+			if (Walk(golem, md))
+				break;
+		}
+		return;
+	}
+
 	if ((golem.flags & MFLAG_TARGETS_MONSTER) == 0)
 		UpdateEnemy(golem);
 
 	if (golem.mode == MonsterMode::MeleeAttack) {
 		return;
 	}
+
+	bool enemyNearby = false;
+	if ((golem.flags & MFLAG_NO_ENEMY) == 0) {
+		int distToEnemy = golem.position.tile.WalkingDistance(Monsters[golem.enemy].position.tile);
+		enemyNearby = distToEnemy <= MinionEngageRange;
+	}
+
+	if (!enemyNearby) {
+		if (distToOwner > MaxMinionChaseDistance) {
+			golem.var2++;
+			if (golem.var2 < MinionIdleDelay)
+				return;
+			golem.var2 = 0;
+			if (AiPlanPathTo(golem, Players[ownerId].position.tile))
+				return;
+			Direction towardsOwner = GetDirection(golem.position.tile, Players[ownerId].position.tile);
+			RandomWalk(golem, towardsOwner);
+			return;
+		}
+		if (Players[ownerId].isWalking()) {
+			golem.var2++;
+			if (golem.var2 < MinionIdleDelay)
+				return;
+			golem.var2 = 0;
+			if (AiPlanPathTo(golem, Players[ownerId].position.tile))
+				return;
+			Direction towardsOwner = GetDirection(golem.position.tile, Players[ownerId].position.tile);
+			RandomWalk(golem, towardsOwner);
+		} else {
+			golem.direction = GetDirection(golem.position.tile, Players[ownerId].position.tile);
+		}
+		return;
+	}
+
+	golem.var2 = 0;
 
 	if ((golem.flags & MFLAG_NO_ENEMY) == 0) {
 		auto &enemy = Monsters[golem.enemy];
@@ -3913,17 +3987,18 @@ void GolumAi(Monster &golem)
 			StartAttack(golem);
 			return;
 		}
-		if (AiPlanPath(golem))
-			return;
+		if (distToOwner <= MaxMinionChaseDistance) {
+			if (AiPlanPath(golem))
+				return;
+		}
 	}
 
 	golem.pathCount++;
 	if (golem.pathCount > 8)
 		golem.pathCount = 5;
 
-	size_t ownerId = golem.getId();
-	if (ownerId >= MAX_PLRS)
-		ownerId -= MAX_PLRS;
+	if (AiPlanPathTo(golem, Players[ownerId].position.tile))
+		return;
 
 	if (RandomWalk(golem, Players[ownerId]._pdir))
 		return;

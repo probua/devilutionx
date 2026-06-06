@@ -16,6 +16,8 @@
 #include "engine/render/primitive_render.hpp"
 #include "levels/gendung.h"
 #include "levels/setmaps.h"
+#include "missiles.h"
+#include "monster.h"
 #include "player.h"
 #include "utils/language.h"
 #include "utils/stdcompat/algorithm.hpp"
@@ -40,6 +42,8 @@ enum MapColors : uint8_t {
 	MapColorsDim = (PAL16_YELLOW + 8),
 	/** color for items on automap */
 	MapColorsItem = (PAL8_BLUE + 1),
+	/** color for player minions (golem/skeleton) on automap */
+	MapColorsMinion = (PAL16_BEIGE + 8),
 };
 
 struct AutomapTile {
@@ -638,6 +642,83 @@ void SearchAutomapItem(const Surface &out, const Displacement &myPlayerOffset, i
 }
 
 /**
+ * @brief Renders an arrow on the automap for a player minion (golem/skeleton).
+ */
+void DrawAutomapMinion(const Surface &out, const Displacement &myPlayerOffset, const Monster &minion)
+{
+	Point tile = minion.position.tile;
+
+	int px = tile.x - 2 * AutomapOffset.deltaX - ViewPosition.x;
+	int py = tile.y - 2 * AutomapOffset.deltaY - ViewPosition.y;
+
+	Point base = {
+		(myPlayerOffset.deltaX * AutoMapScale / 100 / 2) + (px - py) * AmLine(16) + gnScreenWidth / 2,
+		(myPlayerOffset.deltaY * AutoMapScale / 100 / 2) + (px + py) * AmLine(8) + (gnScreenHeight - GetMainPanel().size.height) / 2
+	};
+
+	if (CanPanelsCoverView()) {
+		if (IsRightPanelOpen())
+			base.x -= gnScreenWidth / 4;
+		if (IsLeftPanelOpen())
+			base.x += gnScreenWidth / 4;
+	}
+	base.y -= AmLine(16);
+
+	switch (minion.direction) {
+	case Direction::North: {
+		const Point point { base.x, base.y - AmLine(16) };
+		DrawVerticalLine(out, point, AmLine(16), MapColorsMinion);
+		DrawMapLineSteepNE(out, { point.x - AmLine(4), point.y + 2 * AmLine(4) }, AmLine(4), MapColorsMinion);
+		DrawMapLineSteepNW(out, { point.x + AmLine(4), point.y + 2 * AmLine(4) }, AmLine(4), MapColorsMinion);
+	} break;
+	case Direction::NorthEast: {
+		const Point point { base.x + AmLine(16), base.y - AmLine(8) };
+		DrawHorizontalLine(out, { point.x - AmLine(8), point.y }, AmLine(8), MapColorsMinion);
+		DrawMapLineNE(out, { point.x - 2 * AmLine(8), point.y + AmLine(8) }, AmLine(8), MapColorsMinion);
+		DrawMapLineSteepSW(out, point, AmLine(4), MapColorsMinion);
+	} break;
+	case Direction::East: {
+		const Point point { base.x + AmLine(16), base.y };
+		DrawMapLineNW(out, point, AmLine(4), MapColorsMinion);
+		DrawHorizontalLine(out, { point.x - AmLine(16), point.y }, AmLine(16), MapColorsMinion);
+		DrawMapLineSW(out, point, AmLine(4), MapColorsMinion);
+	} break;
+	case Direction::SouthEast: {
+		const Point point { base.x + AmLine(16), base.y + AmLine(8) };
+		DrawMapLineSteepNW(out, point, AmLine(4), MapColorsMinion);
+		DrawMapLineSE(out, { point.x - 2 * AmLine(8), point.y - AmLine(8) }, AmLine(8), MapColorsMinion);
+		DrawHorizontalLine(out, { point.x - (AmLine(8) + 1), point.y }, AmLine(8) + 1, MapColorsMinion);
+	} break;
+	case Direction::South: {
+		const Point point { base.x, base.y + AmLine(16) };
+		DrawVerticalLine(out, { point.x, point.y - AmLine(16) }, AmLine(16), MapColorsMinion);
+		DrawMapLineSteepSW(out, { point.x + AmLine(4), point.y - 2 * AmLine(4) }, AmLine(4), MapColorsMinion);
+		DrawMapLineSteepSE(out, { point.x - AmLine(4), point.y - 2 * AmLine(4) }, AmLine(4), MapColorsMinion);
+	} break;
+	case Direction::SouthWest: {
+		const Point point { base.x - AmLine(16), base.y + AmLine(8) };
+		DrawMapLineSteepNE(out, point, AmLine(4), MapColorsMinion);
+		DrawMapLineSW(out, { point.x + 2 * AmLine(8), point.y - AmLine(8) }, AmLine(8), MapColorsMinion);
+		DrawHorizontalLine(out, point, AmLine(8) + 1, MapColorsMinion);
+	} break;
+	case Direction::West: {
+		const Point point { base.x - AmLine(16), base.y };
+		DrawMapLineNE(out, point, AmLine(4), MapColorsMinion);
+		DrawHorizontalLine(out, point, AmLine(16) + 1, MapColorsMinion);
+		DrawMapLineSE(out, point, AmLine(4), MapColorsMinion);
+	} break;
+	case Direction::NorthWest: {
+		const Point point { base.x - AmLine(16), base.y - AmLine(8) };
+		DrawMapLineNW(out, { point.x + 2 * AmLine(8), point.y + AmLine(8) }, AmLine(8), MapColorsMinion);
+		DrawHorizontalLine(out, point, AmLine(8) + 1, MapColorsMinion);
+		DrawMapLineSteepSE(out, point, AmLine(4), MapColorsMinion);
+	} break;
+	case Direction::NoDirection:
+		break;
+	}
+}
+
+/**
  * @brief Renders an arrow on the automap, centered on and facing the direction of the player.
  */
 void DrawAutomapPlr(const Surface &out, const Displacement &myPlayerOffset, int playerId)
@@ -980,6 +1061,13 @@ void DrawAutomap(const Surface &out)
 			DrawAutomapPlr(out, myPlayerOffset, playerId);
 		}
 	}
+
+	Monster &golem = Monsters[MyPlayerId];
+	if (golem.position.tile != GolemHoldingCell)
+		DrawAutomapMinion(out, myPlayerOffset, golem);
+	Monster &skeleton = Monsters[MAX_PLRS + MyPlayerId];
+	if (skeleton.position.tile != GolemHoldingCell)
+		DrawAutomapMinion(out, myPlayerOffset, skeleton);
 
 	myPlayerOffset.deltaY -= TILE_HEIGHT / 2;
 	if (AutoMapShowItems)

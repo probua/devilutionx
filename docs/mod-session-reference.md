@@ -205,7 +205,10 @@ Forzadas a QUEST_NOTAVAIL en InitQuests().
 | `Source/panels/spell_icons.cpp` | `SpellITbl[37] = 24`, array 53 entradas |
 | `Source/misdat.cpp` | `MissilesData[Skeleton]` con AddSkeleton |
 | `Source/missiles.cpp` / `.h` | `AddSkeleton()` |
-| `Source/monster.cpp` / `.h` | skeletonTypeIndex, InitSkeletons, SpawnSkeleton, KillMySkeleton, GolumAi fix ownerId, DeleteMonsterList skeleton loop |
+| `Source/monster.cpp` / `.h` | skeletonTypeIndex, InitSkeletons, SpawnSkeleton, KillMySkeleton, GolumAi leash (MaxMinionChaseDistance/MaxMinionReturnDistance), DeleteMonsterList skeleton loop |
+| `Source/automap.cpp` | DrawAutomapMinion — golem y esqueleto visibles en automapa (flecha verde) |
+| `Source/qol/minionstatus.cpp` / `.h` | DrawMinionStatus — HUD con icono + barra HP para golem/esqueleto |
+| `Source/engine/render/scrollrt.cpp` | Llamada a DrawMinionStatus después de DrawXPBar |
 | `Source/msg.cpp` / `.h` | CMD_AWAKESKELETON, NetSendCmdSkeleton, OnAwakeSkeleton, DeltaSyncSkeleton, OnKillGolem modified, DeltaLoadLevel skeleton support |
 | `Source/player.cpp` | RemovePlrMissiles esqueleto cleanup |
 | `Source/diablo.cpp` | InitSkeletons() en load de nivel |
@@ -224,6 +227,84 @@ Forzadas a QUEST_NOTAVAIL en InitQuests().
 - Probar Telekinesis rework (knockback 2 tiles + stun)
 - Verificar dropeo de libros por tier en cada nivel de mazmorra
 - Agregar stubs para hechizos no implementados (DoomSerpents, BloodRitual, Invisibility) si crashean
+- Probar IA de leash de golem/esqueleto (dejar perseguir a 8, volver a 12)
+
+## Minion leash (golem/esqueleto)
+
+La IA `GolumAi` tiene tres estados de comportamiento según la presencia de enemigos y la distancia al dueño:
+
+### Constantes
+
+| Constante | Valor | Descripción |
+|---|---|---|
+| `MaxMinionChaseDistance` | 4 | Rango libre para perseguir enemigos |
+| `MaxMinionReturnDistance` | 8 | Distancia de retorno urgente al dueño |
+| `MinionEngageRange` | 5 | Rango para activar modo combate |
+| `MinionIdleDelay` | 4 | Ticks entre pasos en modo relajado (~5 pasos/seg) |
+
+### Estados
+
+**Sin enemigo a <= 5 tiles:**
+
+| Dist. al dueño | Estado | Comportamiento |
+|---|---|---|
+| 0-4 | **Idle** | Si jugador camina: sigue con pathfind+delay. Si jugador quieto: se queda quieto mirando al dueño |
+| 5-8 | **Relajado** | Camina hacia dueño con pathfinding, 1 paso cada 4 ticks |
+| >8 | **Urgente** | Pathfind directo hacia dueño, cada tick |
+
+**Con enemigo a <= 5 tiles:**
+
+| Dist. al dueño | Comportamiento |
+|---|---|
+| <= 4 | Perseguir enemigo con pathfind, atacar si adyacente |
+| > 4 | Volver al dueño (no perseguir), ataque solo si adyacente |
+
+### Transiciones
+
+- `UpdateEnemy()` corre cada tick → detección de enemigos es instantánea (~50ms)
+- `var2` se usa como contador de delay en modo relajado
+- Al detectar enemigo: `var2 = 0`, modo activo inmediato
+- Al perder enemigo: transición a idle/relajado en el siguiente tick
+
+### Pathfinding
+
+`AiPlanPathTo(golem, ownerPosition)` usa BFS (`FindPath`) para navegar alrededor de paredes. Fallback a `RandomWalk` directo si no encuentra ruta. Aplica en todas las secciones de movimiento.
+
+Constantes definidas en `Source/monster.cpp` (namespace anónimo).
+
+## Minion en automapa (Tab)
+
+El golem y el esqueleto del jugador local ahora se muestran en el automapa como flechas verdes:
+
+- **Forma**: flecha (igual que los jugadores) que indica la dirección del minion
+- **Color**: verde (`MapColorsMinion = PAL16_BEIGE + 8`)
+- **Solo locales**: solo se muestran los minions del jugador local
+- **Detección**: se dibujan si `position.tile != GolemHoldingCell`
+
+Función `DrawAutomapMinion()` en `Source/automap.cpp`, llamada desde `DrawAutomap()` después de dibujar jugadores.
+
+## Minion status HUD
+
+HUD que muestra el estado del golem y esqueleto del jugador local, centrado horizontalmente justo arriba del panel principal:
+
+- **Solo en dungeon**: no se dibuja en town (`leveltype == DTYPE_TOWN`)
+- **Solo si vivo**: se dibuja solo si `position.tile != GolemHoldingCell`
+- **Centrado**: 1 minion → centrado sobre el panel; 2 minions → lado a lado centrados como grupo
+- **Layout horizontal**: Skeleton izquierda, Golem derecha, con 4px de separación
+- **Sin minions**: no se dibuja nada
+
+Cada cuadro (220x36px) contiene:
+- **Icono del hechizo** (37x38px) — `DrawSmallSpellIcon` con `SpellID::Skeleton` o `SpellID::Golem`
+- **Nombre** — "Skeleton" o "Golem" en `UiFlags::ColorWhite | FontSize12`
+- **Barra de vida** (120x3px) — gradiente de 3 líneas, color según HP% (verde >60%, amarillo 30-60%, rojo <30%)
+- **Texto HP** — `currHP/maxHP` centrado debajo de la barra
+
+En builds debug (`_DEBUG`):
+- **Estado AI** — tag `[STATE]` a la derecha del nombre en color whitegold (`ColorWhitegold`)
+- Estados posibles: `IDLE`, `FOLLOW`, `CHASE`, `RETREAT`, `URGENT`, `ATTACK`, `WALK`, `DEAD`
+- Inferido por `GetMinionAiState()` replicando las mismas condiciones de `GolumAi`
+
+Función `DrawMinionStatus()` en `Source/qol/minionstatus.cpp`, llamada desde `DrawView` en `scrollrt.cpp` después de `DrawXPBar`.
 
 ## Debug commands (build con `-DCMAKE_BUILD_TYPE=Debug`)
 

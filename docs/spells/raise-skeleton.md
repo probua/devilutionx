@@ -120,14 +120,66 @@ Agregar un nuevo hechizo "Raise Skeleton" que invoca un esqueleto aliado control
 
 ## IA
 
-El esqueleto usa la misma IA que el golem (`GolumAi`):
+El esqueleto usa la misma IA que el golem (`GolumAi`) con un sistema de **leash** (correa) que controla el comportamiento según la distancia al dueño y la presencia de enemigos:
 
-1. Busca el enemigo más cercano (`UpdateEnemy`)
-2. Si está adyacente al enemigo → ataque cuerpo a cuerpo (`StartAttack`)
-3. Si está lejos → planifica ruta (`AiPlanPath`)
-4. Si no tiene enemigo o no hay ruta → camina aleatoriamente en la dirección del jugador dueño (`RandomWalk` con `Players[ownerId]._pdir`)
+### Comportamiento por distancia (sin enemigo cercano)
 
-El `ownerId` se calcula como `getId() - MAX_PLRS` para esqueletos (corregido en `GolumAi`).
+| Dist. al dueño | Estado | Comportamiento |
+|---|---|---|
+| 0-4 | **Idle** | Si jugador camina: sigue con pathfind+delay. Si jugador quieto: se queda quieto mirando al dueño |
+| 5-8 | **Relajado** | Camina hacia dueño con pathfinding, 1 paso cada 4 ticks (`MinionIdleDelay`) |
+| >8 | **Urgente** | Pathfind directo hacia dueño, cada tick |
+
+### Comportamiento con enemigo (a <= `MinionEngageRange` = 5 tiles)
+
+| Dist. al dueño | Comportamiento |
+|---|---|
+| <= `MaxMinionChaseDistance` (4) | Perseguir enemigo con `AiPlanPath`, atacar si adyacente (`StartAttack`) |
+| > 4 | Volver al dueño, ataque solo si enemigo adyacente |
+
+### Seguimiento del jugador
+
+- Cuando el jugador **ataca** (`PM_ATTACK` o `PM_RATTACK`), el minion avanza en la dirección `_pdir` del jugador usando `RandomWalk`, con un delay de `MinionIdleDelay` ticks
+- Cuando el jugador **camina** (se mueve sin atacar), el minion sigue usando `AiPlanPathTo` con delay
+- El minion **nunca usa Teleport** — solo camina, lo que preserva la sincronización en MP
+
+### Pathfinding
+
+- `AiPlanPathTo(Monster&, Point)` — BFS (`FindPath`) hacia la posición del dueño, con fallback a `RandomWalk` directo si no encuentra ruta
+- `var2` se usa como contador de delay entre pasos (safe porque `GolumAi` no lo usaba antes)
+
+### Transiciones
+
+- `UpdateEnemy()` corre cada tick → detección de enemigos es instantánea (~50ms)
+- Al detectar enemigo: `var2 = 0`, modo activo inmediato
+- Al perder enemigo: transición a idle/relajado en el siguiente tick
+
+### Constantes definidas en `Source/monster.cpp` (namespace anónimo)
+
+| Constante | Valor | Descripción |
+|---|---|---|
+| `MaxMinionChaseDistance` | 4 | Radio libre para perseguir enemigos |
+| `MaxMinionReturnDistance` | 8 | Distancia de retorno urgente |
+| `MinionEngageRange` | 5 | Rango para activar modo combate |
+| `MinionIdleDelay` | 4 | Ticks entre pasos en modo relajado |
+
+## Visibilidad
+
+### Automapa (Tab)
+
+El esqueleto se muestra en el automapa como una flecha verde:
+- Color: `MapColorsMinion = PAL16_BEIGE + 8`
+- Solo el esqueleto del jugador local
+- Implementado en `DrawAutomapMinion()` en `Source/automap.cpp`
+
+### HUD de estado
+
+El esqueleto tiene un cuadro de estado en la esquina inferior izquierda del viewport:
+- **Posición**: arriba a la izquierda del panel principal (`panel.x + 4`)
+- **Contenido**: icono de Raise Skeleton (37x38px) + barra de vida (30x3px) + texto HP
+- **Solo visible**: en dungeon y cuando el esqueleto está vivo
+- **Color de barra**: verde (>60% HP), amarillo (30-60%), rojo (<30%)
+- Implementado en `DrawMinionStatus()` en `Source/qol/minionstatus.cpp`
 
 ## Comportamiento final
 
@@ -152,8 +204,12 @@ El `ownerId` se calcula como `getId() - MAX_PLRS` para esqueletos (corregido en 
 - `Source/misdat.cpp` — 1 línea
 - `Source/missiles.cpp` — 1 función
 - `Source/missiles.h` — 1 declaración
-- `Source/monster.cpp` — 7 secciones
+- `Source/monster.cpp` — 7 secciones + IA leash (3 estados, pathfinding, follow)
 - `Source/monster.h` — 3 declaraciones
+- `Source/automap.cpp` — `DrawAutomapMinion()` (flecha verde en automapa)
+- `Source/qol/minionstatus.cpp` — `DrawMinionStatus()` (HUD icono + barra HP)
+- `Source/qol/minionstatus.h` — declaración de `DrawMinionStatus()`
+- `Source/engine/render/scrollrt.cpp` — llamada a `DrawMinionStatus`
 - `Source/msg.cpp` — 5 secciones
 - `Source/msg.h` — 2 líneas
 - `Source/panels/spell_book.cpp` — 2 líneas

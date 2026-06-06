@@ -108,7 +108,8 @@ Key mod-modified files (see `docs/mod-session-reference.md` for the full table):
 - `Source/player.cpp` — XP x10 (`ExperienceMultiplier`), shared XP (`gbActivePlayers`), `MaxSpellLevel = 4`
 - `Source/missiles.cpp` — 15 damage formulas using `GetVirtualLevel()`, new `AddSkeleton()`
 - `Source/items.cpp` — `ItemsGetCurrlevel()` with virtual mapping, spell book/staff fixes
-- `Source/monster.cpp` — 93 monsters remapped in `monstdat.cpp`, skeleton summon system
+- `Source/monster.cpp` — 93 monsters remapped in `monstdat.cpp`, skeleton summon system, minion leash AI
+- `Source/automap.cpp` — minion (golem/skeleton) visible on automap as green arrow
 - `Source/spelldat.cpp` — new `SpellID::Skeleton=37`, spell tier data, `MAX_SPELLS=53`
 
 ## Architecture

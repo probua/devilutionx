@@ -145,6 +145,7 @@ set(libdevilutionx_SRCS
   qol/chatlog.cpp
   qol/floatingnumbers.cpp
   qol/itemlabels.cpp
+  qol/minionstatus.cpp
   qol/monhealthbar.cpp
   qol/stash.cpp
   qol/xpbar.cpp

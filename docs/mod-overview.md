@@ -104,8 +104,20 @@ Eliminadas via `QUEST_NOTAVAIL` forzado en `InitQuests()`.
 | `Source/missiles.cpp` | 7 | Daño trampas, minhit, Fire Wall |
 | `Source/player.cpp` | 7 | XP x10, shared XP, voice dialogs, trap disarm |
 | `Source/stores.cpp` | 7 | Shop level mapping |
+| `Source/spelldat.h` / `.cpp` | Spells | `Skeleton=37`, spell tier data, `MAX_SPELLS=53` |
+| `Source/panels/spell_book.cpp` | Spells | Layout páginas 0-1 (Skeleton, Telekinesis, Null, Inferno) |
+| `Source/panels/spell_icons.cpp` | Spells | `SpellITbl[37]=24`, array 53 entradas |
+| `Source/misdat.cpp` | Spells | `MissilesData[Skeleton]` con AddSkeleton |
+| `Source/missiles.cpp` / `.h` | Spells | `AddSkeleton()`, 15 damage formulas con `GetVirtualLevel()` |
+| `Source/monster.cpp` / `.h` | Spells + Minions | skeletonTypeIndex, InitSkeletons, SpawnSkeleton, KillMySkeleton, GolumAi leash, minion spawn/cleanup |
+| `Source/automap.cpp` | Minions | `DrawAutomapMinion()` — golem y esqueleto visibles en automapa (flecha verde) |
+| `Source/qol/minionstatus.cpp` / `.h` | Minions | `DrawMinionStatus()` — HUD con icono + barra HP para golem/esqueleto |
+| `Source/engine/render/scrollrt.cpp` | Minions | Llamada a `DrawMinionStatus` después de `DrawXPBar` |
+| `Source/msg.cpp` / `.h` | Spells | CMD_AWAKESKELETON, NetSendCmdSkeleton, OnAwakeSkeleton, DeltaSyncSkeleton |
 
 ## Decisiones de diseño
+
+### Generales
 
 - `NUMLEVELS` se mantiene en 25 para evitar buffer overflows en código de Hellfire
 - Código de Hellfire no se elimina, solo no se activa (`gbIsHellfire == false`)
@@ -113,6 +125,68 @@ Eliminadas via `QUEST_NOTAVAIL` forzado en `InitQuests()`.
 - Diablo boss se coloca via `GetLevelMTypes()` hardcoded, no via `minDunLvl`/`maxDunLvl`
 - Item generation usa mapeo virtual en vez de modificar `iMinMLvl` en `itemdat.cpp`
 - El nivel 6 (Hell) hace doble función: es el primer nivel de Hell (town warp) Y el nivel de Lazarus (pentagrama)
+
+### Minions (Golem y Raise Skeleton)
+
+Ambos minions usan la misma IA (`GolumAi`) con un sistema de **leash** (correa) que controla cuándo perseguir enemigos y cuándo volver al dueño.
+
+#### Constantes
+
+| Constante | Valor | Descripción |
+|---|---|---|
+| `MaxMinionChaseDistance` | 4 | Radio libre para perseguir enemigos sin volver |
+| `MaxMinionReturnDistance` | 8 | Distancia a la que el minion vuelve urgentemente |
+| `MinionEngageRange` | 5 | Rango de detección de enemigos para activar combate |
+| `MinionIdleDelay` | 4 | Ticks entre pasos en modo relajado (~5 pasos/seg a 20 ticks/seg) |
+
+#### Estados de IA
+
+**Sin enemigo cercano (ninguno a <= 5 tiles):**
+
+| Dist. al dueño | Estado | Comportamiento |
+|---|---|---|
+| 0-4 | Idle | Si jugador camina: sigue con pathfind+delay. Si jugador quieto: se queda quieto |
+| 5-8 | Relajado | Camina hacia dueño con pathfinding, 1 paso cada 4 ticks |
+| >8 | Urgente | Pathfind directo hacia dueño, cada tick |
+
+**Con enemigo a <= 5 tiles:**
+
+| Dist. al dueño | Comportamiento |
+|---|---|
+| <= 4 | Perseguir enemigo con pathfind, atacar si adyacente |
+| > 4 | Volver al dueño (no perseguir), ataque solo si adyacente |
+
+#### Pathfinding
+
+- `AiPlanPathTo(Monster&, Point)` — BFS hacia la posición del dueño, con fallback a `RandomWalk` si no hay ruta
+- El minion nunca usa Teleport, solo camina (preserva sincronización en MP)
+- Cuando el jugador ataca (PM_ATTACK o PM_RATTACK), el minion avanza en la dirección `_pdir` del jugador con `RandomWalk` y un delay de 4 ticks
+
+#### Automap
+
+El golem y el esqueleto se muestran en el automapa (Tab) como flechas verdes:
+- **Color**: verde (`MapColorsMinion = PAL16_BEIGE + 8`)
+- **Solo locales**: solo los minions del jugador local
+- **Detección**: se dibujan si `position.tile != GolemHoldingCell`
+- Implementado en `DrawAutomapMinion()` en `Source/automap.cpp`
+
+#### HUD de estado
+
+Barra de estado del minion centrada horizontalmente justo arriba del panel principal:
+- **Solo en dungeon** (`leveltype != DTYPE_TOWN`)
+- **Solo si vivo** (`position.tile != GolemHoldingCell`)
+- **Centrado**: 1 minion → centrado; 2 minions → lado a lado centrados como grupo
+- **Sin minions**: no se dibuja nada
+
+Cada cuadro (220x36px) contiene:
+- **Icono del hechizo** (37x38px) — `DrawSmallSpellIcon` con el SpellID del summon
+- **Nombre** — "Skeleton" o "Golem"
+- **Barra de vida** (120x3px) — gradiente de 3 líneas, color según HP% (verde >60%, amarillo 30-60%, rojo <30%)
+- **Texto HP** — `currHP/maxHP` (valores `>> 6` para display)
+
+En builds debug (`_DEBUG`), se muestra un tag de estado AI a la derecha del nombre (IDLE, FOLLOW, CHASE, RETREAT, URGENT, ATTACK, WALK, DEAD).
+
+Implementado en `DrawMinionStatus()` en `Source/qol/minionstatus.cpp`, llamado desde `DrawView` en `scrollrt.cpp`.
 
 ## Hotfixes post-implementación
 
