@@ -322,15 +322,8 @@ int GetSpellBookLevel(SpellID s)
 	}
 
 	if (!gbIsHellfire) {
-		switch (s) {
-		case SpellID::Nova:
-		case SpellID::Apocalypse:
+		if (s > SpellID::LastDiablo)
 			return -1;
-		default:
-			if (s > SpellID::LastDiablo)
-				return -1;
-			break;
-		}
 	}
 
 	return GetSpellData(s).sBookLvl;

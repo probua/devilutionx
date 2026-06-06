@@ -2580,6 +2580,11 @@ void AddApocalypse(Missile &missile, AddMissileParameter & /*parameter*/)
 	missile._mirange = 255;
 }
 
+void AddEtherealize(Missile &missile, AddMissileParameter & /*parameter*/)
+{
+	missile._miDelFlag = true;
+}
+
 void AddInferno(Missile &missile, AddMissileParameter &parameter)
 {
 	missile.var2 = 5 * missile._midam;

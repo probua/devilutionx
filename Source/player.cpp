@@ -1507,16 +1507,10 @@ void ValidatePlayer()
 		myPlayer._pBaseVit = myPlayer.GetMaximumAttributeValue(CharacterAttribute::Vitality);
 	}
 
-	uint64_t msk = 0;
 	for (int b = static_cast<int8_t>(SpellID::Firebolt); b < MAX_SPELLS; b++) {
-		if (GetSpellBookLevel((SpellID)b) != -1) {
-			msk |= GetSpellBitmask(static_cast<SpellID>(b));
-			if (myPlayer._pSplLvl[b] > MaxSpellLevel)
-				myPlayer._pSplLvl[b] = MaxSpellLevel;
-		}
+		if (myPlayer._pSplLvl[b] > MaxSpellLevel)
+			myPlayer._pSplLvl[b] = MaxSpellLevel;
 	}
-
-	myPlayer._pMemSpells &= msk;
 }
 
 void CheckCheatStats(Player &player)

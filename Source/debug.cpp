@@ -536,9 +536,7 @@ std::string DebugCmdSetSpellsLevel(const string_view parameter)
 {
 	uint8_t level = static_cast<uint8_t>(std::max(0, atoi(parameter.data())));
 	for (uint8_t i = static_cast<uint8_t>(SpellID::Firebolt); i < MAX_SPELLS; i++) {
-		if (GetSpellBookLevel(static_cast<SpellID>(i)) != -1) {
-			NetSendCmdParam2(true, CMD_CHANGE_SPELL_LEVEL, i, level);
-		}
+		NetSendCmdParam2(true, CMD_CHANGE_SPELL_LEVEL, i, level);
 	}
 	if (level == 0)
 		MyPlayer->_pMemSpells = 0;

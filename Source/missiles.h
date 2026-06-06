@@ -371,6 +371,7 @@ void AddItemRepair(Missile &missile, AddMissileParameter &parameter);
 void AddStaffRecharge(Missile &missile, AddMissileParameter &parameter);
 void AddTrapDisarm(Missile &missile, AddMissileParameter &parameter);
 void AddApocalypse(Missile &missile, AddMissileParameter &parameter);
+void AddEtherealize(Missile &missile, AddMissileParameter &parameter);
 void AddInferno(Missile &missile, AddMissileParameter &parameter);
 void AddInfernoControl(Missile &missile, AddMissileParameter &parameter);
 
