@@ -270,6 +270,15 @@ La IA `GolumAi` tiene tres estados de comportamiento según la presencia de enem
 
 `AiPlanPathTo(golem, ownerPosition)` usa BFS (`FindPath`) para navegar alrededor de paredes. Fallback a `RandomWalk` directo si no encuentra ruta. Aplica en todas las secciones de movimiento.
 
+### Idle freeze (golem)
+
+El golem no tiene sprite de Stand en los assets originales (0 frames). Para que no se vea "corriendo" mientras está quieto, se usa el primer frame de la animación Attack congelado con `ticksPerFrame = 127` (máximo int8_t):
+
+- **`MonsterIdle()`** (monster.cpp ~1018): cuando el golem está en Stand, `MonsterGraphic::Attack` frame 0 freeze
+- **`M_StartStand()`** (monster.cpp ~3631): cuando el golem entra a Stand, `MonsterGraphic::Attack` frame 0 freeze
+- Al caminar/atacar, `NewMonsterAnim` resetea `ticksPerFrame` al valor normal → animación se reanuda
+- **Solo aplica a `MT_GOLEM`** — el esqueleto (`MT_WSKELAX`) tiene sprites Stand propios
+
 Constantes definidas en `Source/monster.cpp` (namespace anónimo).
 
 ## Minion en automapa (Tab)

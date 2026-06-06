@@ -1017,10 +1017,13 @@ void SyncLightPosition(Monster &monster)
 
 void MonsterIdle(Monster &monster)
 {
-	if (monster.type().type == MT_GOLEM)
-		monster.changeAnimationData(MonsterGraphic::Walk);
-	else
+	if (monster.type().type == MT_GOLEM) {
+		monster.changeAnimationData(MonsterGraphic::Attack);
+		monster.animInfo.currentFrame = 0;
+		monster.animInfo.ticksPerFrame = 127;
+	} else {
 		monster.changeAnimationData(MonsterGraphic::Stand);
+	}
 
 	if (monster.animInfo.isLastFrame())
 		UpdateEnemy(monster);
@@ -3628,10 +3631,13 @@ bool M_Talker(const Monster &monster)
 void M_StartStand(Monster &monster, Direction md)
 {
 	ClearMVars(monster);
-	if (monster.type().type == MT_GOLEM)
-		NewMonsterAnim(monster, MonsterGraphic::Walk, md);
-	else
+	if (monster.type().type == MT_GOLEM) {
+		NewMonsterAnim(monster, MonsterGraphic::Attack, md);
+		monster.animInfo.currentFrame = 0;
+		monster.animInfo.ticksPerFrame = 127;
+	} else {
 		NewMonsterAnim(monster, MonsterGraphic::Stand, md);
+	}
 	monster.var1 = static_cast<int>(monster.mode);
 	monster.var2 = 0;
 	monster.mode = MonsterMode::Stand;

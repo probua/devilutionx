@@ -162,6 +162,10 @@ Ambos minions usan la misma IA (`GolumAi`) con un sistema de **leash** (correa) 
 - El minion nunca usa Teleport, solo camina (preserva sincronización en MP)
 - Cuando el jugador ataca (PM_ATTACK o PM_RATTACK), el minion avanza en la dirección `_pdir` del jugador con `RandomWalk` y un delay de 4 ticks
 
+#### Idle freeze (golem)
+
+El golem no tiene sprite de Stand en los assets originales (0 frames). Para que no se vea "corriendo" mientras está quieto, se usa el primer frame de la animación Attack congelado con `ticksPerFrame = 127`. Solo aplica a `MT_GOLEM` — el esqueleto tiene sprites Stand propios. Al caminar/atacar, la animación se reanuda normalmente.
+
 #### Automap
 
 El golem y el esqueleto se muestran en el automapa (Tab) como flechas verdes:
