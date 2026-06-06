@@ -3484,10 +3484,10 @@ void InitGolems()
 
 void InitSkeletons()
 {
-	if (!setlevel) {
-		for (int i = 0; i < MAX_PLRS; i++)
-			AddMonster(GolemHoldingCell, Direction::South, skeletonTypeIndex, false);
-	}
+	if (setlevel)
+		return;
+	for (int i = 0; i < MAX_PLRS; i++)
+		AddMonster(GolemHoldingCell, Direction::South, skeletonTypeIndex, false);
 }
 
 void InitMonsters()
@@ -3552,9 +3552,13 @@ void InitMonsters()
 void SetMapMonsters(const uint16_t *dunData, Point startPosition)
 {
 	AddMonsterType(MT_GOLEM, PLACE_SPECIAL);
-	if (setlevel)
+	if (setlevel) {
 		for (int i = 0; i < MAX_PLRS; i++)
 			AddMonster(GolemHoldingCell, Direction::South, 0, false);
+		size_t skelType = AddMonsterType(MT_WSKELAX, PLACE_SPECIAL);
+		for (int i = 0; i < MAX_PLRS; i++)
+			AddMonster(GolemHoldingCell, Direction::South, skelType, false);
+	}
 
 	int width = SDL_SwapLE16(dunData[0]);
 	int height = SDL_SwapLE16(dunData[1]);
@@ -4638,6 +4642,12 @@ void SpawnGolem(Player &player, Monster &golem, Point position, Missile &missile
 
 void SpawnSkeleton(Player &player, Monster &skeleton, Point position, Missile &missile)
 {
+	size_t skelType = GetMonsterTypeIndex(MT_WSKELAX);
+	if (skelType >= LevelMonsterTypeCount)
+		skelType = AddMonsterType(MT_WSKELAX, PLACE_SPECIAL);
+	if (skeleton.levelType != skelType)
+		InitMonster(skeleton, Direction::South, skelType, GolemHoldingCell);
+
 	dMonster[position.x][position.y] = skeleton.getId() + 1;
 	skeleton.position.tile = position;
 	skeleton.position.future = position;

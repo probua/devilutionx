@@ -2758,7 +2758,7 @@ void DeltaLoadLevel()
 				if (monster.type().type == MT_GOLEM) {
 					GolumAi(monster);
 					monster.flags |= (MFLAG_TARGETS_MONSTER | MFLAG_GOLEM);
-				} else if (i >= MAX_PLRS && i < MAX_PLRS + MAX_PLRS) {
+				} else if (i >= MAX_PLRS && i < MAX_PLRS + MAX_PLRS && monster.type().type == MT_WSKELAX) {
 					GolumAi(monster);
 					monster.flags |= MFLAG_GOLEM;
 				} else {

@@ -31,8 +31,8 @@ Agregar un nuevo hechizo "Raise Skeleton" que invoca un esqueleto aliado control
 
 - **`skeletonTypeIndex`**: variable global que almacena el tipo de monstruo de los esqueletos invocados
 - **`GetLevelMTypes()`**: registra `MT_WSKELAX` con `PLACE_SPECIAL` y guarda el índice en `skeletonTypeIndex`
-- **`InitSkeletons()`**: pre-crea esqueletos en `GolemHoldingCell` para cada jugador (slots `MAX_PLRS + playerId`)
-- **`SpawnSkeleton()`**: ubica el esqueleto en el mapa, setea stats (HP, daño, toHit, armor), `MFLAG_GOLEM`, `ai = MonsterAIID::Golem`, envía `NetSendCmdSkeleton` en multiplayer
+- **`InitSkeletons()`**: pre-crea esqueletos en `GolemHoldingCell` para cada jugador (slots `MAX_PLRS + playerId`). **En set levels**, skip (`if (setlevel) return`) porque los slots ya fueron reservados por `SetMapMonsters()`.
+- **`SpawnSkeleton(Player&, Monster&, ...)`**: ubica el esqueleto en el mapa, setea stats (HP, daño, toHit, armor), `MFLAG_GOLEM`, `ai = MonsterAIID::Golem`, envía `NetSendCmdSkeleton` en multiplayer. **Forza tipo `MT_WSKELAX`** con `InitMonster()` si el slot tiene tipo incorrecto (defensa contra deltas antiguos o slot corrupto).
 - **`KillMySkeleton()`**: mata el esqueleto propio (reutiliza `CMD_KILLGOLEM` para la sincronización en red)
 - **`DeleteMonsterList()`**: resetea esqueletos muertos a `GolemHoldingCell` (mismo patrón que golems)
 - **`GolumAi()`** (`Source/monster.cpp:3926-3928`): corregido para calcular correctamente el `ownerId` — si `getId() >= MAX_PLRS`, se resta `MAX_PLRS` para obtener el índice del jugador dueño
@@ -49,7 +49,7 @@ Agregar un nuevo hechizo "Raise Skeleton" que invoca un esqueleto aliado control
 - **`OnAwakeSkeleton()`**: handler que recibe y crea `MissileID::Skeleton` en el cliente remoto
 - **`DeltaSyncSkeleton()`**: guarda estado del esqueleto en `monster[MAX_PLRS + pnum]` del nivel delta
 - **`OnKillGolem()`**: ahora también mata el esqueleto (`Monsters[MAX_PLRS + pnum]`) del jugador
-- **`DeltaLoadLevel()`**: reconoce esqueletos (`i >= MAX_PLRS`) como summons tipo golem, llamando `GolumAi()` y setando `MFLAG_GOLEM`
+- **`DeltaLoadLevel()`**: reconoce esqueletos (`i >= MAX_PLRS && i < MAX_PLRS + MAX_PLRS && monster.type().type == MT_WSKELAX`) como summons tipo golem, llamando `GolumAi()` y setando `MFLAG_GOLEM`. El check de tipo previene aplicar IA de minion a monstruos .dun que pudieran estar en esos slots (defensa contra deltas de saves antiguos).
 
 ### 8. Cleanup al cambiar de nivel (`Source/player.cpp`)
 
@@ -64,7 +64,19 @@ Agregar un nuevo hechizo "Raise Skeleton" que invoca un esqueleto aliado control
 
 ### 10. Inicialización (`Source/diablo.cpp`)
 
-- `InitSkeletons()` llamado después de `InitGolems()` en los 3 puntos de carga de nivel (`lvldir == ENTRY_LOAD`, `else`, y set maps)
+- `InitSkeletons()` llamado después de `InitGolems()` en los 3 puntos de carga de nivel (`lvldir == ENTRY_LOAD`, `else`, y set maps). En set levels, `SetMapMonsters()` ya reserva los slots 4-7 antes que los monstruos del `.dun`.
+
+### 10b. Slot reservation en set levels (`Source/monster.cpp`, `Source/msg.cpp`)
+
+Los slots `Monsters[0..3]` (golems) y `Monsters[4..7]` (esqueletos) deben estar siempre reservados para minions, sin importar el tipo de nivel. En niveles normales, `InitGolems()` + `InitSkeletons()` corren antes que `InitMonsters()`, garantizando la reserva. En set levels, el flujo es diferente:
+
+**Problema**: `SetMapMonsters()` (llamada desde `LoadSetMap()`) colocaba monstruos del `.dun` en slots 4-7 antes de que `InitSkeletons()` pudiera reservarlos. Resultado: monstruos del .dun aparecían como "esqueletos" con HP base, y al invocar Raise Skeleton el spell operaba sobre un slot con tipo incorrecto (ej: arquero en vez de MT_WSKELAX).
+
+**Fix**:
+- `SetMapMonsters()`: reserva slots 0-3 (golems) + 4-7 (esqueletos con `MT_WSKELAX`) ANTES de procesar la monster layer del `.dun`. Los monstruos del .dun ahora empiezan en slot 8+.
+- `InitSkeletons()`: skip en set levels (`if (setlevel) return`) — ya creados por `SetMapMonsters`.
+- `SpawnSkeleton(Player&, Monster&, ...)`: fuerza tipo `MT_WSKELAX` con `InitMonster()` si el slot tiene tipo incorrecto.
+- `DeltaLoadLevel()` (`msg.cpp`): check `monster.type().type == MT_WSKELAX` antes de aplicar `GolumAi` a slots 4-7.
 
 ### 11. MaxSpellLevel: 15 → 4 (`Source/player.h`)
 
@@ -192,13 +204,13 @@ El esqueleto tiene un cuadro de estado centrado sobre el panel principal:
 - `Source/misdat.cpp` — 1 línea
 - `Source/missiles.cpp` — 1 función
 - `Source/missiles.h` — 1 declaración
-- `Source/monster.cpp` — 7 secciones + IA leash simplificada (3 estados: FOLLOW/CHASE/IDLE)
+- `Source/monster.cpp` — 7 secciones + IA leash simplificada (3 estados: FOLLOW/CHASE/IDLE) + slot reservation en set levels + idle freeze golem
 - `Source/monster.h` — 3 declaraciones
 - `Source/automap.cpp` — `DrawAutomapMinion()` (flecha verde en automapa)
-- `Source/qol/minionstatus.cpp` — `DrawMinionStatus()` (HUD icono + barra HP)
+- `Source/qol/minionstatus.cpp` — `DrawMinionStatus()` (HUD icono + barra HP + debug state)
 - `Source/qol/minionstatus.h` — declaración de `DrawMinionStatus()`
 - `Source/engine/render/scrollrt.cpp` — llamada a `DrawMinionStatus`
-- `Source/msg.cpp` — 5 secciones
+- `Source/msg.cpp` — 5 secciones + fix DeltaLoadLevel (type check en slots 4-7)
 - `Source/msg.h` — 2 líneas
 - `Source/panels/spell_book.cpp` — 2 líneas
 - `Source/panels/spell_icons.cpp` — 1 línea

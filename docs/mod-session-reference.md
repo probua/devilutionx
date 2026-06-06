@@ -205,11 +205,11 @@ Forzadas a QUEST_NOTAVAIL en InitQuests().
 | `Source/panels/spell_icons.cpp` | `SpellITbl[37] = 24`, array 53 entradas |
 | `Source/misdat.cpp` | `MissilesData[Skeleton]` con AddSkeleton |
 | `Source/missiles.cpp` / `.h` | `AddSkeleton()` |
-| `Source/monster.cpp` / `.h` | skeletonTypeIndex, InitSkeletons, SpawnSkeleton, KillMySkeleton, GolumAi leash (MaxMinionChaseDistance/MaxMinionReturnDistance), DeleteMonsterList skeleton loop |
+| `Source/monster.cpp` / `.h` | skeletonTypeIndex, InitSkeletons, SpawnSkeleton (type force), KillMySkeleton, GolumAi leash (3 estados), DeleteMonsterList skeleton loop, SetMapMonsters slot reservation, golem idle freeze |
 | `Source/automap.cpp` | DrawAutomapMinion — golem y esqueleto visibles en automapa (flecha verde) |
-| `Source/qol/minionstatus.cpp` / `.h` | DrawMinionStatus — HUD con icono + barra HP para golem/esqueleto |
+| `Source/qol/minionstatus.cpp` / `.h` | DrawMinionStatus — HUD centrado con icono + barra HP + debug state para golem/esqueleto |
 | `Source/engine/render/scrollrt.cpp` | Llamada a DrawMinionStatus después de DrawXPBar |
-| `Source/msg.cpp` / `.h` | CMD_AWAKESKELETON, NetSendCmdSkeleton, OnAwakeSkeleton, DeltaSyncSkeleton, OnKillGolem modified, DeltaLoadLevel skeleton support |
+| `Source/msg.cpp` / `.h` | CMD_AWAKESKELETON, NetSendCmdSkeleton, OnAwakeSkeleton, DeltaSyncSkeleton, OnKillGolem modified, DeltaLoadLevel type check en slots 4-7 |
 | `Source/player.cpp` | RemovePlrMissiles esqueleto cleanup |
 | `Source/diablo.cpp` | InitSkeletons() en load de nivel |
 
@@ -223,6 +223,22 @@ Forzadas a QUEST_NOTAVAIL en InitQuests().
 - Balance general: ¿7 niveles con x10 XP es demasiado rápido?
 - Rebalancear fórmulas para `MaxSpellLevel=4` (ScaleSpellEffect, daños, summons, mana cost, Mana Shield, duraciones)
 - Probar Raise Skeleton end-to-end (spawn, IA, cleanup, MP sync)
+- Probar Raise Skeleton en set levels (Leoric Chamber, Lazarus Lair)
+
+## Fix: Skeleton slots en set levels
+
+**Bug**: En set levels (Leoric Chamber, Lazarus Lair), `SetMapMonsters()` colocaba monstruos del `.dun` en slots 4-7 (reservados para esqueletos invocados). Esto causaba:
+1. Monstruos del .dun aparecían como "esqueletos" con HP base (5 HP)
+2. Al invocar Raise Skeleton, el spell operaba sobre el slot equivocado → aparecía con sprite de arquero en vez de MT_WSKELAX
+
+**Root cause**: No existe mecanismo de reserva de slots. En niveles normales, `InitGolems()` + `InitSkeletons()` corren antes que `InitMonsters()` (slots 0-7 reservados). En set levels, `SetMapMonsters()` corre primero y llena slots 4+ con monstruos del .dun.
+
+**Fix** (4 cambios):
+
+1. **`SetMapMonsters()`** (`monster.cpp`): Reservar slots 4-7 para esqueletos ANTES de procesar la monster layer del .dun. Los monstruos del .dun ahora empiezan en slot 8+.
+2. **`InitSkeletons()`** (`monster.cpp`): Skip en set levels (`if (setlevel) return`) — ya creados por `SetMapMonsters`.
+3. **`SpawnSkeleton(Player&, Monster&, ...)`** (`monster.cpp`): Forzar tipo `MT_WSKELAX` con `InitMonster()` si el slot tiene tipo incorrecto (defensa contra deltas antiguos).
+4. **`DeltaLoadLevel()`** (`msg.cpp`): Agregar check `monster.type().type == MT_WSKELAX` antes de aplicar `GolumAi` a slots 4-7 (defensa contra deltas de saves antiguos).
 - Probar Healing+HealOther fusion (libro de Healing sube ambos)
 - Probar Telekinesis rework (knockback 2 tiles + stun)
 - Verificar dropeo de libros por tier en cada nivel de mazmorra

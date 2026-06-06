@@ -109,11 +109,11 @@ Eliminadas via `QUEST_NOTAVAIL` forzado en `InitQuests()`.
 | `Source/panels/spell_icons.cpp` | Spells | `SpellITbl[37]=24`, array 53 entradas |
 | `Source/misdat.cpp` | Spells | `MissilesData[Skeleton]` con AddSkeleton |
 | `Source/missiles.cpp` / `.h` | Spells | `AddSkeleton()`, 15 damage formulas con `GetVirtualLevel()` |
-| `Source/monster.cpp` / `.h` | Spells + Minions | skeletonTypeIndex, InitSkeletons, SpawnSkeleton, KillMySkeleton, GolumAi leash, minion spawn/cleanup |
+| `Source/monster.cpp` / `.h` | Spells + Minions | skeletonTypeIndex, InitSkeletons, SpawnSkeleton (type force), KillMySkeleton, GolumAi leash (3 estados), SetMapMonsters slot reservation, golem idle freeze |
 | `Source/automap.cpp` | Minions | `DrawAutomapMinion()` — golem y esqueleto visibles en automapa (flecha verde) |
-| `Source/qol/minionstatus.cpp` / `.h` | Minions | `DrawMinionStatus()` — HUD con icono + barra HP para golem/esqueleto |
+| `Source/qol/minionstatus.cpp` / `.h` | Minions | `DrawMinionStatus()` — HUD centrado con icono + barra HP + debug state |
 | `Source/engine/render/scrollrt.cpp` | Minions | Llamada a `DrawMinionStatus` después de `DrawXPBar` |
-| `Source/msg.cpp` / `.h` | Spells | CMD_AWAKESKELETON, NetSendCmdSkeleton, OnAwakeSkeleton, DeltaSyncSkeleton |
+| `Source/msg.cpp` / `.h` | Spells | CMD_AWAKESKELETON, NetSendCmdSkeleton, OnAwakeSkeleton, DeltaSyncSkeleton, DeltaLoadLevel type check |
 
 ## Decisiones de diseño
 
@@ -268,3 +268,13 @@ Implementado en `DrawMinionStatus()` en `Source/qol/minionstatus.cpp`, llamado d
 - **Fix:** `missile._mirange = 19` en `AddFlashBottom()` (`missiles.cpp:2057`)
 - **Nota:** Bug de devilutionX original, no del mod
 - **Detalle:** Ver `mod-fix-flash-spell.md`
+
+### 2025-06-06: Skeleton slots en set levels
+
+- **Bug:** En set levels (Leoric Chamber, Lazarus Lair), monstruos del `.dun` ocupaban slots 4-7 (reservados para esqueletos invocados). Causaba: (1) monstruos del .dun aparecían como "esqueletos" con HP base, (2) Raise Skeleton creaba minion con sprite incorrecto (arquero en vez de MT_WSKELAX)
+- **Causa:** `SetMapMonsters()` colocaba monstruos del .dun en slots 4+ antes de que `InitSkeletons()` reservara los slots. No existe mecanismo de reserva — el código dependía del orden de ejecución, que cambia en set levels
+- **Fix (4 archivos):**
+  - `SetMapMonsters()` (`monster.cpp`): reserva slots 4-7 para esqueletos ANTES de monstruos del .dun
+  - `InitSkeletons()` (`monster.cpp`): skip en set levels (`if (setlevel) return`)
+  - `SpawnSkeleton()` (`monster.cpp`): fuerza tipo `MT_WSKELAX` con `InitMonster()` si el slot tiene tipo incorrecto
+  - `DeltaLoadLevel()` (`msg.cpp`): check `monster.type().type == MT_WSKELAX` antes de aplicar `GolumAi` a slots 4-7
