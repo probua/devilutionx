@@ -125,6 +125,91 @@ Forzadas a QUEST_NOTAVAIL en InitQuests().
 - Un jugador activa quest con Cain → `NetSendCmdQuest()` sincroniza para todos en MP
 - `CheckQuests()` no re-envía a set levels completados (`_qactive != QUEST_DONE`)
 
+## Cambios de hechizos (sesión 2025-06-06)
+
+### Healing + HealOther — fusión
+
+- HealOther reemplazado por `Null` en spellbook (página 0, slot 5)
+- `GetBookSpell()` y `GetStaffSpell()` siempre saltan HealOther
+- Al leer libro de Healing, también se aprende HealOther al mismo nivel (vía `CMD_CHANGE_SPELL_LEVEL`)
+- Scrolls de Heal Other: sin cambios, siguen siendo funcionales
+- Docs: `docs/spells/healing-healother-merge.md`
+
+### Telekinesis — rework
+
+- Agregado al spellbook (página 0, slot 5, donde antes estaba HealOther)
+- Knockback multi-tile (loop de 2 `M_GetKnockback`)
+- Stun ~1 segundo vía `MonsterMode::Delay` con var2=30
+- No causa daño, no escala por nivel de hechizo
+- Docs: `docs/spells/telekinesis-rework.md`
+
+### Raise Skeleton — nuevo hechizo
+
+- `SpellID::Skeleton` en posición 37 (entre `BoneSpirit=36` y `Mana=38`)
+- `LastDiablo = Skeleton` (37), `MAX_SPELLS = 53`, `MissileID::Skeleton = 108`
+- Mana cost 50, tipo `Magic | Targeted`, `sBookLvl=1`, `sStaffLvl=9`, `minInt=40`
+- Invoca esqueleto en `Monsters[MAX_PLRS + playerId]` (slots 4–7), misma IA que Golem (`GolumAi`)
+- IA corregida: `ownerId = getId() - MAX_PLRS` para esqueletos
+- Multiplayer completo: `CMD_AWAKESKELETON`, `NetSendCmdSkeleton`, `OnAwakeSkeleton`, `DeltaSyncSkeleton`
+- Cleanup en `RemovePlrMissiles()` al cambiar de nivel
+- Docs: `docs/spells/raise-skeleton.md`
+
+### Fix maxSpells (GetBookSpell / GetStaffSpell)
+
+- `items.cpp:641,1284`: `maxSpells` cambiado de `37` a `static_cast<int>(SpellID::LastDiablo) + 1` (=38)
+- El wrap `if (s == maxSpells) s = 1` ahora ocurre en `Mana` (pos 38, `sBookLvl=-1`) en vez de en `Skeleton` (pos 37)
+- Raise Skeleton ahora es elegible como libro y como enchantment de staff
+
+### Spell tiers — sistema de niveles de libros
+
+- 4 tiers alineados con las 4 páginas del spellbook
+- Página 0 (Tier 1, sBookLvl=1): Firebolt, ChargedBolt, HolyBolt, Healing, Telekinesis, Skeleton
+- Página 1 (Tier 2, sBookLvl=3): FireWall, Inferno, Lightning, TownPortal, Flash, StoneCurse
+- Página 2 (Tier 3, sBookLvl=5): Phasing, ManaShield, Elemental, Fireball, FlameWave, ChainLightning, Guardian
+- Página 3 (Tier 4, sBookLvl=6): Nova, Golem, Teleport, Apocalypse, BoneSpirit, BloodStar
+- `iMinMLvl` de libros base: BOOK2 8→6, BOOK3 14→10, BOOK4 20→12
+- Color de libro según tipo de magia: `Fire`→rojo, `Lightning`→azul, `Magic`→gris
+- Golem y Raise Skeleton cambiados a `Magic | Targeted` (libros grises)
+- Sistema acumulativo: tiers inferiores siempre disponibles, superiores se agregan al avanzar
+- Docs: `docs/spells/spell-tiers.md`
+
+### MaxSpellLevel: 15 → 4
+
+- `player.h:37`: `MaxSpellLevel` cambiado de 15 a 4
+- Afecta todos los hechizos: libros se leen hasta nivel 4, shrines capped, red/save clamped
+- `ScaleSpellEffect(base, sl)`: max sl=4 → ×1.60 (vs ×5.56 antes)
+- Rebalanceo pendiente — las fórmulas de daño/duración/healing están calibradas para sl 1–15
+
+## Datos de hechizos página 0
+
+| SpellID | Mana base | sBookLvl | sStaffLvl | minInt | sManaAdj | sMinMana |
+|---|---|---|---|---|---|---|
+| Firebolt | 6 | 1 | 1 | 15 | 1 | 3 |
+| ChargedBolt | 6 | 1 | 1 | 25 | 1 | 6 |
+| HolyBolt | 7 | 1 | 1 | 20 | 1 | 3 |
+| Healing | 5 | 1 | 1 | 17 | 3 | 1 |
+| Telekinesis | 15 | 1 | 2 | 33 | 2 | 8 |
+| Raise Skeleton | 50 | 1 | 9 | 40 | 6 | 60 |
+| Golem | 100 | 6 | 9 | 81 | 6 | 60 |
+
+## Archivos modificados (hechizos)
+
+| Archivo | Cambio |
+|---|---|
+| `Source/player.h` | `MaxSpellLevel = 4` |
+| `Source/spelldat.h` | `Skeleton=37`, `LastDiablo=Skeleton`, `MAX_SPELLS=53`, `MissileID::Skeleton=108` |
+| `Source/spelldat.cpp` | Datos de Raise Skeleton, Golem/Skeleton a Magic, sBookLvl de todos ajustados |
+| `Source/items.cpp` | GetBookSpell/GetStaffSpell (maxSpells fix), GetBookSpell/GetStaffSpell siempre saltan HealOther, Healing book sube HealOther |
+| `Source/itemdat.cpp` | iMinMLvl de BOOK2/BOOK3/BOOK4 reducidos |
+| `Source/panels/spell_book.cpp` | Layout página 0 y 1 (Skeleton, Telekinesis, Null, Inferno) |
+| `Source/panels/spell_icons.cpp` | `SpellITbl[37] = 24`, array 53 entradas |
+| `Source/misdat.cpp` | `MissilesData[Skeleton]` con AddSkeleton |
+| `Source/missiles.cpp` / `.h` | `AddSkeleton()` |
+| `Source/monster.cpp` / `.h` | skeletonTypeIndex, InitSkeletons, SpawnSkeleton, KillMySkeleton, GolumAi fix ownerId, DeleteMonsterList skeleton loop |
+| `Source/msg.cpp` / `.h` | CMD_AWAKESKELETON, NetSendCmdSkeleton, OnAwakeSkeleton, DeltaSyncSkeleton, OnKillGolem modified, DeltaLoadLevel skeleton support |
+| `Source/player.cpp` | RemovePlrMissiles esqueleto cleanup |
+| `Source/diablo.cpp` | InitSkeletons() en load de nivel |
+
 ## Qué falta / pendientes de testing
 
 - Verificar que Lazarus quest funcione end-to-end en MP (Staff → Cain → portal → set level → muerte → Diablo)
@@ -133,11 +218,33 @@ Forzadas a QUEST_NOTAVAIL en InitQuests().
 - Verificar que items generados en nivel 6-7 tengan poder adecuado
 - Verificar estabilidad de todos los niveles en MP cooperativo (2+ jugadores)
 - Balance general: ¿7 niveles con x10 XP es demasiado rápido?
+- Rebalancear fórmulas para `MaxSpellLevel=4` (ScaleSpellEffect, daños, summons, mana cost, Mana Shield, duraciones)
+- Probar Raise Skeleton end-to-end (spawn, IA, cleanup, MP sync)
+- Probar Healing+HealOther fusion (libro de Healing sube ambos)
+- Probar Telekinesis rework (knockback 2 tiles + stun)
+- Verificar dropeo de libros por tier en cada nivel de mazmorra
+- Agregar stubs para hechizos no implementados (DoomSerpents, BloodRitual, Invisibility) si crashean
+
+## Debug commands (build con `-DCMAKE_BUILD_TYPE=Debug`)
+
+Usar en chat del juego (solo en build debug):
+
+| Comando | Descripción |
+|---|---|
+| `drop golem` | Busca ítem cuyo nombre contenga "golem" — mejor usar en dungeon, no en town |
+| `drop raise skeleton` | Idem para Raise Skeleton (debe dropear como libro gris en nivel 1+) |
+| `iteminfo` | Muestra info del ítem seleccionado (ID, seed, flags, validación) |
 
 ## Cómo compilar
 
 ```bash
-cmake --build build -j$(nproc)
+cmake --build build-debug -j$(nproc)
 ```
 
-El binario se genera en `build/devilutionx`.
+Ejecutar con AddressSanitizer:
+
+```bash
+ASAN_OPTIONS=detect_leaks=0 ./build-debug/devilutionx
+```
+
+El binario se genera en `build-debug/devilutionx`.
