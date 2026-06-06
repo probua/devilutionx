@@ -68,7 +68,6 @@ constexpr int HellToHitBonus = 120;
 constexpr int NightmareAcBonus = 50;
 constexpr int HellAcBonus = 80;
 
-constexpr int MaxMinionChaseDistance = 4;
 constexpr int MaxMinionReturnDistance = 8;
 constexpr int MinionEngageRange = 5;
 constexpr int MinionIdleDelay = 4;
@@ -3912,6 +3911,10 @@ void GolumAi(Monster &golem)
 	int distToOwner = golem.position.tile.WalkingDistance(Players[ownerId].position.future);
 
 	if (distToOwner > MaxMinionReturnDistance) {
+		golem.var2++;
+		if (golem.var2 < MinionIdleDelay)
+			return;
+		golem.var2 = 0;
 		if (AiPlanPathTo(golem, Players[ownerId].position.tile))
 			return;
 		Direction towardsOwner = GetDirection(golem.position.tile, Players[ownerId].position.tile);
@@ -3933,89 +3936,40 @@ void GolumAi(Monster &golem)
 		return;
 	}
 
-	bool enemyNearby = false;
-	if ((golem.flags & MFLAG_NO_ENEMY) == 0) {
-		int distToEnemy = golem.position.tile.WalkingDistance(Monsters[golem.enemy].position.tile);
-		enemyNearby = distToEnemy <= MinionEngageRange;
-	}
-
-	if (!enemyNearby) {
-		if (distToOwner > MaxMinionChaseDistance) {
-			golem.var2++;
-			if (golem.var2 < MinionIdleDelay)
-				return;
-			golem.var2 = 0;
-			if (AiPlanPathTo(golem, Players[ownerId].position.tile))
-				return;
-			Direction towardsOwner = GetDirection(golem.position.tile, Players[ownerId].position.tile);
-			RandomWalk(golem, towardsOwner);
-			return;
-		}
-		if (Players[ownerId].isWalking()) {
-			golem.var2++;
-			if (golem.var2 < MinionIdleDelay)
-				return;
-			golem.var2 = 0;
-			if (AiPlanPathTo(golem, Players[ownerId].position.tile))
-				return;
-			Direction towardsOwner = GetDirection(golem.position.tile, Players[ownerId].position.tile);
-			RandomWalk(golem, towardsOwner);
-		} else {
-			golem.direction = GetDirection(golem.position.tile, Players[ownerId].position.tile);
-		}
-		return;
-	}
-
-	golem.var2 = 0;
-
 	if ((golem.flags & MFLAG_NO_ENEMY) == 0) {
 		auto &enemy = Monsters[golem.enemy];
-		int mex = golem.position.tile.x - enemy.position.future.x;
-		int mey = golem.position.tile.y - enemy.position.future.y;
-		golem.direction = GetDirection(golem.position.tile, enemy.position.tile);
-		if (abs(mex) < 2 && abs(mey) < 2) {
-			golem.enemyPosition = enemy.position.tile;
-			if (enemy.activeForTicks == 0) {
-				enemy.activeForTicks = UINT8_MAX;
-				enemy.position.last = golem.position.tile;
-				for (int j = 0; j < 5; j++) {
-					for (int k = 0; k < 5; k++) {
-						int mx = golem.position.tile.x + k - 2;
-						int my = golem.position.tile.y + j - 2;
-						if (!InDungeonBounds({ mx, my }))
-							continue;
-						int enemyId = dMonster[mx][my];
-						if (enemyId > 0)
-							Monsters[enemyId - 1].activeForTicks = UINT8_MAX;
+		int distToEnemy = golem.position.tile.WalkingDistance(enemy.position.tile);
+		if (distToEnemy <= MinionEngageRange) {
+			golem.var2 = 0;
+			golem.direction = GetDirection(golem.position.tile, enemy.position.tile);
+			int mex = golem.position.tile.x - enemy.position.future.x;
+			int mey = golem.position.tile.y - enemy.position.future.y;
+			if (abs(mex) < 2 && abs(mey) < 2) {
+				golem.enemyPosition = enemy.position.tile;
+				if (enemy.activeForTicks == 0) {
+					enemy.activeForTicks = UINT8_MAX;
+					enemy.position.last = golem.position.tile;
+					for (int j = 0; j < 5; j++) {
+						for (int k = 0; k < 5; k++) {
+							int mx = golem.position.tile.x + k - 2;
+							int my = golem.position.tile.y + j - 2;
+							if (!InDungeonBounds({ mx, my }))
+								continue;
+							int enemyId = dMonster[mx][my];
+							if (enemyId > 0)
+								Monsters[enemyId - 1].activeForTicks = UINT8_MAX;
+						}
 					}
 				}
+				StartAttack(golem);
+				return;
 			}
-			StartAttack(golem);
-			return;
-		}
-		if (distToOwner <= MaxMinionChaseDistance) {
 			if (AiPlanPath(golem))
 				return;
 		}
 	}
 
-	golem.pathCount++;
-	if (golem.pathCount > 8)
-		golem.pathCount = 5;
-
-	if (AiPlanPathTo(golem, Players[ownerId].position.tile))
-		return;
-
-	if (RandomWalk(golem, Players[ownerId]._pdir))
-		return;
-
-	Direction md = Left(golem.direction);
-	for (int j = 0; j < 8; j++) {
-		md = Right(md);
-		if (Walk(golem, md)) {
-			break;
-		}
-	}
+	golem.direction = GetDirection(golem.position.tile, Players[ownerId].position.tile);
 }
 
 void DeleteMonsterList()

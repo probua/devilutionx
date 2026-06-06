@@ -128,39 +128,28 @@ Eliminadas via `QUEST_NOTAVAIL` forzado en `InitQuests()`.
 
 ### Minions (Golem y Raise Skeleton)
 
-Ambos minions usan la misma IA (`GolumAi`) con un sistema de **leash** (correa) que controla cuándo perseguir enemigos y cuándo volver al dueño.
+Ambos minions usan la misma IA (`GolumAi`) con un sistema de **leash** (correa) simplificado con 3 estados:
 
 #### Constantes
 
 | Constante | Valor | Descripción |
 |---|---|---|
-| `MaxMinionChaseDistance` | 4 | Radio libre para perseguir enemigos sin volver |
-| `MaxMinionReturnDistance` | 8 | Distancia a la que el minion vuelve urgentemente |
-| `MinionEngageRange` | 5 | Rango de detección de enemigos para activar combate |
-| `MinionIdleDelay` | 4 | Ticks entre pasos en modo relajado (~5 pasos/seg a 20 ticks/seg) |
+| `MaxMinionReturnDistance` | 8 | Distancia a la que el minion sigue al dueño |
+| `MinionEngageRange` | 5 | Rango de detección de enemigos |
+| `MinionIdleDelay` | 4 | Ticks entre pasos en FOLLOW (~5 pasos/seg a 20 ticks/seg) |
 
-#### Estados de IA
+#### Estados
 
-**Sin enemigo cercano (ninguno a <= 5 tiles):**
-
-| Dist. al dueño | Estado | Comportamiento |
+| Condición | Estado | Comportamiento |
 |---|---|---|
-| 0-4 | Idle | Si jugador camina: sigue con pathfind+delay. Si jugador quieto: se queda quieto |
-| 5-8 | Relajado | Camina hacia dueño con pathfinding, 1 paso cada 4 ticks |
-| >8 | Urgente | Pathfind directo hacia dueño, cada tick |
-
-**Con enemigo a <= 5 tiles:**
-
-| Dist. al dueño | Comportamiento |
-|---|---|
-| <= 4 | Perseguir enemigo con pathfind, atacar si adyacente |
-| > 4 | Volver al dueño (no perseguir), ataque solo si adyacente |
+| `distToOwner > 8` | **FOLLOW** | Pathfind hacia el dueño con delay. Fallback a RandomWalk |
+| `distToOwner ≤ 8` + enemigo a ≤5 | **CHASE** | Perseguir enemigo con pathfind, atacar si adyacente |
+| `distToOwner ≤ 8` + sin enemigo | **IDLE** | Quieto, mirando al dueño |
 
 #### Pathfinding
 
 - `AiPlanPathTo(Monster&, Point)` — BFS hacia la posición del dueño, con fallback a `RandomWalk` si no hay ruta
 - El minion nunca usa Teleport, solo camina (preserva sincronización en MP)
-- Cuando el jugador ataca (PM_ATTACK o PM_RATTACK), el minion avanza en la dirección `_pdir` del jugador con `RandomWalk` y un delay de 4 ticks
 
 #### Idle freeze (golem)
 

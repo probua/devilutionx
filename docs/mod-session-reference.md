@@ -231,44 +231,42 @@ Forzadas a QUEST_NOTAVAIL en InitQuests().
 
 ## Minion leash (golem/esqueleto)
 
-La IA `GolumAi` tiene tres estados de comportamiento según la presencia de enemigos y la distancia al dueño:
+La IA `GolumAi` tiene tres estados de comportamiento:
 
 ### Constantes
 
 | Constante | Valor | Descripción |
 |---|---|---|
-| `MaxMinionChaseDistance` | 4 | Rango libre para perseguir enemigos |
-| `MaxMinionReturnDistance` | 8 | Distancia de retorno urgente al dueño |
-| `MinionEngageRange` | 5 | Rango para activar modo combate |
-| `MinionIdleDelay` | 4 | Ticks entre pasos en modo relajado (~5 pasos/seg) |
+| `MaxMinionReturnDistance` | 8 | Distancia a la que el minion sigue al dueño |
+| `MinionEngageRange` | 5 | Rango para detectar enemigos y entrar en combate |
+| `MinionIdleDelay` | 4 | Ticks entre pasos en FOLLOW (~5 pasos/seg) |
 
 ### Estados
 
-**Sin enemigo a <= 5 tiles:**
-
-| Dist. al dueño | Estado | Comportamiento |
+| Condición | Estado | Comportamiento |
 |---|---|---|
-| 0-4 | **Idle** | Si jugador camina: sigue con pathfind+delay. Si jugador quieto: se queda quieto mirando al dueño |
-| 5-8 | **Relajado** | Camina hacia dueño con pathfinding, 1 paso cada 4 ticks |
-| >8 | **Urgente** | Pathfind directo hacia dueño, cada tick |
-
-**Con enemigo a <= 5 tiles:**
-
-| Dist. al dueño | Comportamiento |
-|---|---|
-| <= 4 | Perseguir enemigo con pathfind, atacar si adyacente |
-| > 4 | Volver al dueño (no perseguir), ataque solo si adyacente |
+| `distToOwner > 8` | **FOLLOW** | Pathfind hacia el dueño con delay de 4 ticks. Fallback a RandomWalk |
+| `distToOwner ≤ 8` + enemigo a ≤5 tiles | **CHASE** | Pathfind hacia enemigo, atacar si adyacente |
+| `distToOwner ≤ 8` + sin enemigo cercano | **IDLE** | Quieto, mirando al dueño |
 
 ### Transiciones
 
 - `UpdateEnemy()` corre cada tick → detección de enemigos es instantánea (~50ms)
-- `var2` se usa como contador de delay en modo relajado
+- `var2` se usa como contador de delay en FOLLOW
 - Al detectar enemigo: `var2 = 0`, modo activo inmediato
-- Al perder enemigo: transición a idle/relajado en el siguiente tick
+- Al perder enemigo: transición a IDLE en el siguiente tick
 
 ### Pathfinding
 
-`AiPlanPathTo(golem, ownerPosition)` usa BFS (`FindPath`) para navegar alrededor de paredes. Fallback a `RandomWalk` directo si no encuentra ruta. Aplica en todas las secciones de movimiento.
+`AiPlanPathTo(golem, ownerPosition)` usa BFS (`FindPath`) para navegar alrededor de paredes. Fallback a `RandomWalk` directo si no encuentra ruta. Aplica en FOLLOW.
+
+### Debug HUD estados
+
+En builds debug (`_DEBUG`), el tag `[STATE]` muestra:
+- `FOLLOW` — distToOwner > 8
+- `CHASE` — enemigo cercano a ≤5 tiles
+- `IDLE` — sin enemigo, mirando al dueño
+- `ATTACK` / `WALK` / `DEAD` — según MonsterMode
 
 ### Idle freeze (golem)
 

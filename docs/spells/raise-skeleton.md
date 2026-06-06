@@ -120,48 +120,35 @@ Agregar un nuevo hechizo "Raise Skeleton" que invoca un esqueleto aliado control
 
 ## IA
 
-El esqueleto usa la misma IA que el golem (`GolumAi`) con un sistema de **leash** (correa) que controla el comportamiento según la distancia al dueño y la presencia de enemigos:
+El esqueleto usa la misma IA que el golem (`GolumAi`) con un sistema de **leash** simplificado con 3 estados:
 
-### Comportamiento por distancia (sin enemigo cercano)
+### Estados
 
-| Dist. al dueño | Estado | Comportamiento |
+| Condición | Estado | Comportamiento |
 |---|---|---|
-| 0-4 | **Idle** | Si jugador camina: sigue con pathfind+delay. Si jugador quieto: se queda quieto mirando al dueño |
-| 5-8 | **Relajado** | Camina hacia dueño con pathfinding, 1 paso cada 4 ticks (`MinionIdleDelay`) |
-| >8 | **Urgente** | Pathfind directo hacia dueño, cada tick |
-
-### Comportamiento con enemigo (a <= `MinionEngageRange` = 5 tiles)
-
-| Dist. al dueño | Comportamiento |
-|---|---|
-| <= `MaxMinionChaseDistance` (4) | Perseguir enemigo con `AiPlanPath`, atacar si adyacente (`StartAttack`) |
-| > 4 | Volver al dueño, ataque solo si enemigo adyacente |
-
-### Seguimiento del jugador
-
-- Cuando el jugador **ataca** (`PM_ATTACK` o `PM_RATTACK`), el minion avanza en la dirección `_pdir` del jugador usando `RandomWalk`, con un delay de `MinionIdleDelay` ticks
-- Cuando el jugador **camina** (se mueve sin atacar), el minion sigue usando `AiPlanPathTo` con delay
-- El minion **nunca usa Teleport** — solo camina, lo que preserva la sincronización en MP
+| `distToOwner > 8` | **FOLLOW** | Pathfind hacia el dueño con delay de 4 ticks. Fallback a RandomWalk |
+| `distToOwner ≤ 8` + enemigo a ≤5 tiles | **CHASE** | Perseguir enemigo con `AiPlanPath`, atacar si adyacente (`StartAttack`) |
+| `distToOwner ≤ 8` + sin enemigo cercano | **IDLE** | Quieto, mirando al dueño |
 
 ### Pathfinding
 
 - `AiPlanPathTo(Monster&, Point)` — BFS (`FindPath`) hacia la posición del dueño, con fallback a `RandomWalk` directo si no encuentra ruta
-- `var2` se usa como contador de delay entre pasos (safe porque `GolumAi` no lo usaba antes)
+- `var2` se usa como contador de delay entre pasos en FOLLOW
+- El minion **nunca usa Teleport** — solo camina, lo que preserva la sincronización en MP
 
 ### Transiciones
 
 - `UpdateEnemy()` corre cada tick → detección de enemigos es instantánea (~50ms)
 - Al detectar enemigo: `var2 = 0`, modo activo inmediato
-- Al perder enemigo: transición a idle/relajado en el siguiente tick
+- Al perder enemigo: transición a IDLE en el siguiente tick
 
 ### Constantes definidas en `Source/monster.cpp` (namespace anónimo)
 
 | Constante | Valor | Descripción |
 |---|---|---|
-| `MaxMinionChaseDistance` | 4 | Radio libre para perseguir enemigos |
-| `MaxMinionReturnDistance` | 8 | Distancia de retorno urgente |
-| `MinionEngageRange` | 5 | Rango para activar modo combate |
-| `MinionIdleDelay` | 4 | Ticks entre pasos en modo relajado |
+| `MaxMinionReturnDistance` | 8 | Distancia a la que el minion sigue al dueño |
+| `MinionEngageRange` | 5 | Rango de detección de enemigos |
+| `MinionIdleDelay` | 4 | Ticks entre pasos en FOLLOW |
 
 ## Visibilidad
 
@@ -174,11 +161,12 @@ El esqueleto se muestra en el automapa como una flecha verde:
 
 ### HUD de estado
 
-El esqueleto tiene un cuadro de estado en la esquina inferior izquierda del viewport:
-- **Posición**: arriba a la izquierda del panel principal (`panel.x + 4`)
-- **Contenido**: icono de Raise Skeleton (37x38px) + barra de vida (30x3px) + texto HP
+El esqueleto tiene un cuadro de estado centrado sobre el panel principal:
+- **Layout**: centrado horizontalmente; 1 minion centrado solo, 2 minions lado a lado
+- **Contenido**: icono de Raise Skeleton (37x38px) + barra de vida (120x3px) + texto HP
 - **Solo visible**: en dungeon y cuando el esqueleto está vivo
 - **Color de barra**: verde (>60% HP), amarillo (30-60%), rojo (<30%)
+- **Debug**: tag `[STATE]` (FOLLOW/CHASE/IDLE/ATTACK/WALK/DEAD) en builds `_DEBUG`
 - Implementado en `DrawMinionStatus()` en `Source/qol/minionstatus.cpp`
 
 ## Comportamiento final
@@ -204,7 +192,7 @@ El esqueleto tiene un cuadro de estado en la esquina inferior izquierda del view
 - `Source/misdat.cpp` — 1 línea
 - `Source/missiles.cpp` — 1 función
 - `Source/missiles.h` — 1 declaración
-- `Source/monster.cpp` — 7 secciones + IA leash (3 estados, pathfinding, follow)
+- `Source/monster.cpp` — 7 secciones + IA leash simplificada (3 estados: FOLLOW/CHASE/IDLE)
 - `Source/monster.h` — 3 declaraciones
 - `Source/automap.cpp` — `DrawAutomapMinion()` (flecha verde en automapa)
 - `Source/qol/minionstatus.cpp` — `DrawMinionStatus()` (HUD icono + barra HP)

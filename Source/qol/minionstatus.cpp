@@ -25,7 +25,6 @@ constexpr int BarMaxWidth = 120;
 constexpr int BarHeight = 3;
 
 #ifdef _DEBUG
-constexpr int DebugMaxMinionChaseDistance = 4;
 constexpr int DebugMaxMinionReturnDistance = 8;
 constexpr int DebugMinionEngageRange = 5;
 
@@ -45,22 +44,14 @@ string_view GetMinionAiState(const Monster &minion)
 	int distToOwner = minion.position.tile.WalkingDistance(Players[ownerId].position.future);
 
 	if (distToOwner > DebugMaxMinionReturnDistance)
-		return "URGENT";
+		return "FOLLOW";
 
-	bool enemyNearby = false;
 	if ((minion.flags & MFLAG_NO_ENEMY) == 0) {
 		int distToEnemy = minion.position.tile.WalkingDistance(Monsters[minion.enemy].position.tile);
-		enemyNearby = distToEnemy <= DebugMinionEngageRange;
-	}
-
-	if (enemyNearby) {
-		if (distToOwner <= DebugMaxMinionChaseDistance)
+		if (distToEnemy <= DebugMinionEngageRange)
 			return "CHASE";
-		return "RETREAT";
 	}
 
-	if (distToOwner > DebugMaxMinionChaseDistance)
-		return "FOLLOW";
 	return "IDLE";
 }
 #endif
