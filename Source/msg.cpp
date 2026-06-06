@@ -1634,8 +1634,17 @@ size_t OnKnockback(const TCmd *pCmd, size_t pnum)
 
 	if (gbBufferMsgs != 1 && player.isOnActiveLevel() && monsterIdx < MaxMonsters) {
 		Monster &monster = Monsters[monsterIdx];
-		M_GetKnockback(monster);
+		for (int i = 0; i < 2; i++) {
+			if (monster.mode == MonsterMode::Petrified)
+				break;
+			Point oldPos = monster.position.old;
+			M_GetKnockback(monster);
+			if (monster.position.old == oldPos)
+				break;
+		}
 		M_StartHit(monster, player, 0);
+		monster.var2 = 30;
+		monster.mode = MonsterMode::Delay;
 	}
 
 	return sizeof(message);
