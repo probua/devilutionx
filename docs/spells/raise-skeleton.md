@@ -55,7 +55,14 @@ Agregar un nuevo hechizo "Raise Skeleton" que invoca un esqueleto aliado control
 
 - `RemovePlrMissiles()`: mata y limpia el esqueleto además del golem cuando el jugador cambia de nivel
 
-### 9. Inicialización (`Source/diablo.cpp`)
+### 9. Fix: GetBookSpell y GetStaffSpell (`Source/items.cpp`)
+
+- **`GetBookSpell()`** (`items.cpp:641`): `maxSpells` era 37 (último spell de Diablo vanilla), pero al mover `Skeleton` a la posición 37, el `while (rv > 0)` con `if (s == maxSpells) s = 1` hacía wrap **antes** de procesar el spell 37, impidiendo que apareciera como libro.
+- **Fix:** `maxSpells = 37` → `static_cast<int>(SpellID::LastDiablo) + 1` (= 38), moviendo el wrap a `Mana` (pos 38, `sBookLvl=-1`, nunca elegible).
+- **`GetStaffSpell()`** (`items.cpp:1284`): mismo bug con `GetSpellStaffLevel` — fix idéntico.
+- Con este cambio, Raise Skeleton es elegible como libro y como enchantment de staff.
+
+### 10. Inicialización (`Source/diablo.cpp`)
 
 - `InitSkeletons()` llamado después de `InitGolems()` en los 3 puntos de carga de nivel (`lvldir == ENTRY_LOAD`, `else`, y set maps)
 
@@ -87,9 +94,9 @@ Agregar un nuevo hechizo "Raise Skeleton" que invoca un esqueleto aliado control
 | MissileID | `Skeleton = 108` |
 | Nombre | "Raise Skeleton" |
 | Mana cost | 50 |
-| Tipo | `Fire \| Targeted` |
-| Book level | 11 |
-| Staff level | 9 |
+| Tipo | `Magic \| Targeted` |
+| Book level (sBookLvl) | 1 |
+| Staff level (sStaffLvl) | 9 |
 | Inteligencia mínima | 81 |
 | Ajuste de mana | 6 |
 | Mana mínimo | 60 |
@@ -114,7 +121,8 @@ El `ownerId` se calcula como `getId() - MAX_PLRS` para esqueletos (corregido en 
 | Página del libro | 0 (slot 6) |
 | Nombre | Raise Skeleton |
 | Mana cost | 50 |
-| Nivel mínimo de libro | 11 |
+| Tipo | Magic |
+| Nivel mínimo de libro (sBookLvl) | 1 |
 | Tipo de monstruo | White Skeleton Axe (`MT_WSKELAX`) |
 | AI | Golem |
 | Slot en Monsters[] | `MAX_PLRS + playerId` |
@@ -136,5 +144,6 @@ El `ownerId` se calcula como `getId() - MAX_PLRS` para esqueletos (corregido en 
 - `Source/panels/spell_book.cpp` — 2 líneas
 - `Source/panels/spell_icons.cpp` — 1 línea
 - `Source/player.cpp` — 1 sección
+- `Source/items.cpp` — 2 secciones (GetBookSpell, GetStaffSpell)
 - `Source/spelldat.cpp` — 1 línea
 - `Source/spelldat.h` — 3 líneas

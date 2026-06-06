@@ -638,7 +638,7 @@ void GetBookSpell(Item &item, int lvl)
 	if (lvl == 0)
 		lvl = 1;
 
-	int maxSpells = gbIsHellfire ? MAX_SPELLS : 37;
+	int maxSpells = gbIsHellfire ? MAX_SPELLS : static_cast<int>(SpellID::LastDiablo) + 1;
 
 	rv = GenerateRnd(maxSpells) + 1;
 
@@ -1281,7 +1281,7 @@ void GetStaffSpell(const Player &player, Item &item, int lvl, bool onlygood)
 		return;
 	}
 
-	int maxSpells = gbIsHellfire ? MAX_SPELLS : 37;
+	int maxSpells = gbIsHellfire ? MAX_SPELLS : static_cast<int>(SpellID::LastDiablo) + 1;
 	int l = lvl / 2;
 	if (l == 0)
 		l = 1;
