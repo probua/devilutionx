@@ -66,6 +66,21 @@ Agregar un nuevo hechizo "Raise Skeleton" que invoca un esqueleto aliado control
 
 - `InitSkeletons()` llamado después de `InitGolems()` en los 3 puntos de carga de nivel (`lvldir == ENTRY_LOAD`, `else`, y set maps)
 
+### 11. MaxSpellLevel: 15 → 4 (`Source/player.h`)
+
+- `MaxSpellLevel` cambiado de 15 a 4 (`player.h:37`), limitando el nivel máximo de todos los hechizos a 4.
+- Afecta a Raise Skeleton: `spellLvl` máximo del esqueleto es ahora 4 en vez de 15.
+- Impacto en stats del esqueleto a nivel máximo:
+
+| Stat | sl=4 (nuevo max) | sl=15 (anterior max) | Reducción |
+|---|---|---|---|
+| HP (Mana=200) | 2560 + 2×mana/3 | 9600 + 2×mana/3 | **−73%** |
+| ToHit | 60 + 2×playerLevel | 115 + 2×playerLevel | **−48%** |
+| Daño min | 16 | 38 | **−58%** |
+| Daño max | 24 | 46 | **−48%** |
+
+(Todos los demás hechizos también se ven afectados — ver `docs/spells/spell-tiers.md`.)
+
 ## Stats del esqueleto
 
 | Stat | Fórmula |
@@ -97,7 +112,7 @@ Agregar un nuevo hechizo "Raise Skeleton" que invoca un esqueleto aliado control
 | Tipo | `Magic \| Targeted` |
 | Book level (sBookLvl) | 1 |
 | Staff level (sStaffLvl) | 9 |
-| Inteligencia mínima | 81 |
+| Inteligencia mínima (minInt) | 40 |
 | Ajuste de mana | 6 |
 | Mana mínimo | 60 |
 | Staff min | 16 |
@@ -145,5 +160,6 @@ El `ownerId` se calcula como `getId() - MAX_PLRS` para esqueletos (corregido en 
 - `Source/panels/spell_icons.cpp` — 1 línea
 - `Source/player.cpp` — 1 sección
 - `Source/items.cpp` — 2 secciones (GetBookSpell, GetStaffSpell)
+- `Source/player.h` — 1 línea (MaxSpellLevel)
 - `Source/spelldat.cpp` — 1 línea
 - `Source/spelldat.h` — 3 líneas
