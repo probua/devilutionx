@@ -33,6 +33,7 @@
 #include "lighting.h"
 #include "minitext.h"
 #include "missiles.h"
+#include "minion_ai.h"
 #include "monster.h"
 #include "options.h"
 #include "qol/stash.h"

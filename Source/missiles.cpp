@@ -23,6 +23,7 @@
 #include "inv.h"
 #include "levels/trigs.h"
 #include "lighting.h"
+#include "minion_ai.h"
 #include "monster.h"
 #include "spells.h"
 #include "utils/str_cat.hpp"

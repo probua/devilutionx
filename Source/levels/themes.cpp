@@ -14,6 +14,7 @@
 #include "engine/random.hpp"
 #include "items.h"
 #include "levels/trigs.h"
+#include "minion_ai.h"
 #include "monster.h"
 #include "objects.h"
 #include "quests.h"

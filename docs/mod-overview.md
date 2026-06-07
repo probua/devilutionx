@@ -109,7 +109,8 @@ Eliminadas via `QUEST_NOTAVAIL` forzado en `InitQuests()`.
 | `Source/panels/spell_icons.cpp` | Spells | `SpellITbl[37]=24`, array 53 entradas |
 | `Source/misdat.cpp` | Spells | `MissilesData[Skeleton]` con AddSkeleton |
 | `Source/missiles.cpp` / `.h` | Spells | `AddSkeleton()`, 15 damage formulas con `GetVirtualLevel()` |
-| `Source/monster.cpp` / `.h` | Spells + Minions | skeletonTypeIndex, InitSkeletons, SpawnSkeleton (type force), KillMySkeleton, GolumAi leash (3 estados), SetMapMonsters slot reservation, golem idle freeze |
+| `Source/monster.cpp` / `.h` | Spells + Minions | skeletonTypeIndex, KillMySkeleton, SetMapMonsters slot reservation, golem idle freeze |
+| `Source/minion_ai.cpp` / `.h` | Minions | `GolumAi` (3 estados via `var1`), `PickMinionTarget`, `MoveToward`, `ActivateNearbyMonsters`, `InitGolems`, `InitSkeletons`, `PreSpawnSkeleton`, `SpawnGolem`, `SpawnSkeleton` (movidos desde `monster.cpp`) |
 | `Source/automap.cpp` | Minions | `DrawAutomapMinion()` — golem y esqueleto visibles en automapa (flecha verde) |
 | `Source/qol/minionstatus.cpp` / `.h` | Minions | `DrawMinionStatus()` — HUD centrado con icono + barra HP + debug state |
 | `Source/engine/render/scrollrt.cpp` | Minions | Llamada a `DrawMinionStatus` después de `DrawXPBar` |
@@ -128,7 +129,7 @@ Eliminadas via `QUEST_NOTAVAIL` forzado en `InitQuests()`.
 
 ### Minions (Golem y Raise Skeleton)
 
-Ambos minions usan la misma IA (`GolumAi`) con un sistema de **leash** (correa) simplificado con 3 estados:
+Ambos minions usan la misma IA (`GolumAi`) con un sistema de **leash** (correa) simplificado con 3 estados. La IA vive en `Source/minion_ai.cpp` / `Source/minion_ai.h` (separado de `monster.cpp`). Los estados se almacenan en `var1` (0=FOLLOW, 1=CHASE, 2=IDLE).
 
 #### Constantes
 
@@ -138,17 +139,22 @@ Ambos minions usan la misma IA (`GolumAi`) con un sistema de **leash** (correa) 
 | `MinionEngageRange` | 5 | Rango de detección de enemigos |
 | `MinionIdleDelay` | 4 | Ticks entre pasos en FOLLOW (~5 pasos/seg a 20 ticks/seg) |
 
-#### Estados
+#### Estados (var1)
 
-| Condición | Estado | Comportamiento |
-|---|---|---|
-| `distToOwner > 8` | **FOLLOW** | Pathfind hacia el dueño con delay. Fallback a RandomWalk |
-| `distToOwner ≤ 8` + enemigo a ≤5 | **CHASE** | Perseguir enemigo con pathfind, atacar si adyacente |
-| `distToOwner ≤ 8` + sin enemigo | **IDLE** | Quieto, mirando al dueño |
+| var1 | Estado | Condición | Comportamiento |
+|---|---|---|---|
+| 0 | **FOLLOW** | `distToOwner > 8` | Pathfind hacia el dueño con delay. Fallback a RandomWalk |
+| 1 | **CHASE** | Dueño amenazado (monstruo atacándolo a ≤5 tiles del dueño) | Prioriza atacar al enemigo que amenaza al dueño |
+| 1 | **CHASE** | `distToOwner ≤ 8` + enemigo a ≤5 | Perseguir enemigo con pathfind, atacar si adyacente |
+| 2 | **IDLE** | `distToOwner ≤ 8` + sin enemigo | Quieto, mirando al dueño |
+
+Los minions priorizan: (1) proteger al dueño de amenazas (`PickMinionTarget`), (2) atacar enemigos cercanos, (3) quedarse quietos.
 
 #### Pathfinding
 
-- `AiPlanPathTo(Monster&, Point)` — BFS hacia la posición del dueño, con fallback a `RandomWalk` si no hay ruta
+- `MoveToward(Monster&, Point)` — helper que encapsula `AiPlanPathTo()` + `RandomWalk()` fallback
+- `PickMinionTarget(Monster&)` — selección centralizada de target (reemplaza `UpdateEnemy` y `FindOwnerThreat`)
+- `ActivateNearbyMonsters(Monster&)` — activa monstruos cercanos al atacar
 - El minion nunca usa Teleport, solo camina (preserva sincronización en MP)
 
 #### Idle freeze (golem)
@@ -177,7 +183,7 @@ Cada cuadro (220x36px) contiene:
 - **Barra de vida** (120x3px) — gradiente de 3 líneas, color según HP% (verde >60%, amarillo 30-60%, rojo <30%)
 - **Texto HP** — `currHP/maxHP` (valores `>> 6` para display)
 
-En builds debug (`_DEBUG`), se muestra un tag de estado AI a la derecha del nombre (IDLE, FOLLOW, CHASE, RETREAT, URGENT, ATTACK, WALK, DEAD).
+En builds debug (`_DEBUG`), se muestra un tag de estado AI a la derecha del nombre, leído directamente de `var1` vía `MinionState` enum (IDLE, FOLLOW, CHASE, ATTACK, WALK, DEAD).
 
 Implementado en `DrawMinionStatus()` en `Source/qol/minionstatus.cpp`, llamado desde `DrawView` en `scrollrt.cpp`.
 

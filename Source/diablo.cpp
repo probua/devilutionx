@@ -55,6 +55,7 @@
 #include "loadsave.h"
 #include "menu.h"
 #include "minitext.h"
+#include "minion_ai.h"
 #include "missiles.h"
 #include "movie.h"
 #include "multi.h"

@@ -29,6 +29,7 @@
 #include "levels/town.h"
 #include "levels/trigs.h"
 #include "lighting.h"
+#include "minion_ai.h"
 #include "missiles.h"
 #include "nthread.h"
 #include "objects.h"

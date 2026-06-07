@@ -28,6 +28,7 @@ set(libdevilutionx_SRCS
   loadsave.cpp
   menu.cpp
   minitext.cpp
+  minion_ai.cpp
   misdat.cpp
   missiles.cpp
   monstdat.cpp

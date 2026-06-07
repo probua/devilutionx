@@ -31,6 +31,7 @@
 #include "levels/trigs.h"
 #include "lighting.h"
 #include "minitext.h"
+#include "minion_ai.h"
 #include "missiles.h"
 #include "movie.h"
 #include "options.h"
@@ -68,17 +69,10 @@ constexpr int HellToHitBonus = 120;
 constexpr int NightmareAcBonus = 50;
 constexpr int HellAcBonus = 80;
 
-constexpr int MaxMinionReturnDistance = 8;
-constexpr int MinionEngageRange = 5;
-constexpr int MinionIdleDelay = 4;
-
 /** Tracks which missile files are already loaded */
 size_t totalmonsters;
 int monstimgtot;
 int uniquetrans;
-
-/** Type index for skeleton minions (registered in GetLevelMTypes) */
-size_t skeletonTypeIndex;
 
 constexpr const std::array<_monster_id, 12> SkeletonTypes {
 	MT_WSKELAX,
@@ -97,6 +91,11 @@ constexpr const std::array<_monster_id, 12> SkeletonTypes {
 
 /** Maps from monster action to monster animation letter. */
 constexpr char Animletter[7] = "nwahds";
+
+} // namespace
+
+/** Type index for skeleton minions (registered in GetLevelMTypes) */
+size_t skeletonTypeIndex;
 
 size_t GetNumAnims(const MonsterData &monsterData)
 {
@@ -575,7 +574,7 @@ void DeleteMonster(size_t activeIndex)
 	std::swap(ActiveMonsters[activeIndex], ActiveMonsters[ActiveMonsterCount]); // This ensures alive monsters are before ActiveMonsterCount in the array and any deleted monster after
 }
 
-void NewMonsterAnim(Monster &monster, MonsterGraphic graphic, Direction md, AnimationDistributionFlags flags = AnimationDistributionFlags::None, int8_t numSkippedFrames = 0, int8_t distributeFramesBeforeFrame = 0)
+void NewMonsterAnim(Monster &monster, MonsterGraphic graphic, Direction md, AnimationDistributionFlags flags, int8_t numSkippedFrames, int8_t distributeFramesBeforeFrame)
 {
 	const auto &animData = monster.type().getAnimData(graphic);
 	monster.animInfo.setNewAnimation(animData.spritesForDirection(md), animData.frames, animData.rate, flags, numSkippedFrames, distributeFramesBeforeFrame);
@@ -670,6 +669,7 @@ void UpdateEnemy(Monster &monster)
 		monster.enemyPosition = target;
 	} else {
 		monster.flags |= MFLAG_NO_ENEMY;
+		monster.flags &= ~MFLAG_TARGETS_MONSTER;
 	}
 }
 
@@ -1773,7 +1773,7 @@ bool RoundWalk(Monster &monster, Direction direction, int8_t *dir)
 
 bool AiPlanPath(Monster &monster)
 {
-	if (monster.type().type != MT_GOLEM) {
+	if ((monster.flags & MFLAG_GOLEM) == 0) {
 		if (monster.activeForTicks == 0)
 			return false;
 		if (monster.mode != MonsterMode::Stand)
@@ -1798,7 +1798,7 @@ bool AiPlanPath(Monster &monster)
 			return true;
 	}
 
-	if (monster.type().type != MT_GOLEM)
+	if ((monster.flags & MFLAG_GOLEM) == 0)
 		monster.pathCount = 0;
 
 	return false;
@@ -3119,8 +3119,6 @@ bool UpdateModeStance(Monster &monster)
 	}
 }
 
-} // namespace
-
 void InitTRNForUniqueMonster(Monster &monster)
 {
 	char filestr[64];
@@ -3472,22 +3470,6 @@ void WeakenNaKrul()
 	monster.resistance = 0;
 	monster.hitPoints = hp;
 	monster.maxHitPoints = hp;
-}
-
-void InitGolems()
-{
-	if (!setlevel) {
-		for (int i = 0; i < MAX_PLRS; i++)
-			AddMonster(GolemHoldingCell, Direction::South, 0, false);
-	}
-}
-
-void InitSkeletons()
-{
-	if (setlevel)
-		return;
-	for (int i = 0; i < MAX_PLRS; i++)
-		AddMonster(GolemHoldingCell, Direction::South, skeletonTypeIndex, false);
 }
 
 void InitMonsters()
@@ -3896,84 +3878,6 @@ bool Walk(Monster &monster, Direction md)
 		break;
 	}
 	return true;
-}
-
-void GolumAi(Monster &golem)
-{
-	if (golem.position.tile.x == 1 && golem.position.tile.y == 0) {
-		return;
-	}
-
-	if (IsAnyOf(golem.mode, MonsterMode::Death, MonsterMode::SpecialStand) || golem.isWalking()) {
-		return;
-	}
-
-	size_t ownerId = golem.getId();
-	if (ownerId >= MAX_PLRS)
-		ownerId -= MAX_PLRS;
-
-	int distToOwner = golem.position.tile.WalkingDistance(Players[ownerId].position.future);
-
-	if (distToOwner > MaxMinionReturnDistance) {
-		golem.var2++;
-		if (golem.var2 < MinionIdleDelay)
-			return;
-		golem.var2 = 0;
-		if (AiPlanPathTo(golem, Players[ownerId].position.tile))
-			return;
-		Direction towardsOwner = GetDirection(golem.position.tile, Players[ownerId].position.tile);
-		if (RandomWalk(golem, towardsOwner))
-			return;
-		Direction md = Left(towardsOwner);
-		for (int j = 0; j < 8; j++) {
-			md = Right(md);
-			if (Walk(golem, md))
-				break;
-		}
-		return;
-	}
-
-	if ((golem.flags & MFLAG_TARGETS_MONSTER) == 0)
-		UpdateEnemy(golem);
-
-	if (golem.mode == MonsterMode::MeleeAttack) {
-		return;
-	}
-
-	if ((golem.flags & MFLAG_NO_ENEMY) == 0) {
-		auto &enemy = Monsters[golem.enemy];
-		int distToEnemy = golem.position.tile.WalkingDistance(enemy.position.tile);
-		if (distToEnemy <= MinionEngageRange) {
-			golem.var2 = 0;
-			golem.direction = GetDirection(golem.position.tile, enemy.position.tile);
-			int mex = golem.position.tile.x - enemy.position.future.x;
-			int mey = golem.position.tile.y - enemy.position.future.y;
-			if (abs(mex) < 2 && abs(mey) < 2) {
-				golem.enemyPosition = enemy.position.tile;
-				if (enemy.activeForTicks == 0) {
-					enemy.activeForTicks = UINT8_MAX;
-					enemy.position.last = golem.position.tile;
-					for (int j = 0; j < 5; j++) {
-						for (int k = 0; k < 5; k++) {
-							int mx = golem.position.tile.x + k - 2;
-							int my = golem.position.tile.y + j - 2;
-							if (!InDungeonBounds({ mx, my }))
-								continue;
-							int enemyId = dMonster[mx][my];
-							if (enemyId > 0)
-								Monsters[enemyId - 1].activeForTicks = UINT8_MAX;
-						}
-					}
-				}
-				StartAttack(golem);
-				return;
-			}
-			if (AiPlanPath(golem))
-				return;
-		}
-	}
-
-	golem.direction = GetDirection(golem.position.tile, Players[ownerId].position.tile);
 }
 
 void DeleteMonsterList()
@@ -4549,15 +4453,6 @@ void ActivateSkeleton(Monster &monster, Point position)
 	}
 }
 
-Monster *PreSpawnSkeleton()
-{
-	Monster *skeleton = AddSkeleton({ 0, 0 }, Direction::South, false);
-	if (skeleton != nullptr)
-		M_StartStand(*skeleton, Direction::South);
-
-	return skeleton;
-}
-
 void TalktoMonster(Player &player, Monster &monster)
 {
 	if (&player == MyPlayer)
@@ -4610,67 +4505,6 @@ void TalktoMonster(Player &player, Monster &monster)
 			Quests[Q_GARBUD]._qvar1 = QS_GHARBAD_FIRST_ITEM_SPAWNED;
 			NetSendCmdQuest(true, Quests[Q_GARBUD]);
 		}
-	}
-}
-
-void SpawnGolem(Player &player, Monster &golem, Point position, Missile &missile)
-{
-	dMonster[position.x][position.y] = golem.getId() + 1;
-	golem.position.tile = position;
-	golem.position.future = position;
-	golem.position.old = position;
-	golem.pathCount = 0;
-	golem.maxHitPoints = 2 * (320 * missile._mispllvl + player._pMaxMana / 3);
-	golem.hitPoints = golem.maxHitPoints;
-	golem.armorClass = 25;
-	golem.golemToHit = 5 * (missile._mispllvl + 8) + 2 * player._pLevel;
-	golem.minDamage = 2 * (missile._mispllvl + 4);
-	golem.maxDamage = 2 * (missile._mispllvl + 8);
-	golem.flags |= MFLAG_GOLEM;
-	StartSpecialStand(golem, Direction::South);
-	UpdateEnemy(golem);
-	if (&player == MyPlayer) {
-		NetSendCmdGolem(
-		    golem.position.tile.x,
-		    golem.position.tile.y,
-		    golem.direction,
-		    golem.enemy,
-		    golem.hitPoints,
-		    GetLevelForMultiplayer(player));
-	}
-}
-
-void SpawnSkeleton(Player &player, Monster &skeleton, Point position, Missile &missile)
-{
-	size_t skelType = GetMonsterTypeIndex(MT_WSKELAX);
-	if (skelType >= LevelMonsterTypeCount)
-		skelType = AddMonsterType(MT_WSKELAX, PLACE_SPECIAL);
-	if (skeleton.levelType != skelType)
-		InitMonster(skeleton, Direction::South, skelType, GolemHoldingCell);
-
-	dMonster[position.x][position.y] = skeleton.getId() + 1;
-	skeleton.position.tile = position;
-	skeleton.position.future = position;
-	skeleton.position.old = position;
-	skeleton.pathCount = 0;
-	skeleton.maxHitPoints = 2 * (320 * missile._mispllvl + player._pMaxMana / 3);
-	skeleton.hitPoints = skeleton.maxHitPoints;
-	skeleton.armorClass = 25;
-	skeleton.golemToHit = 5 * (missile._mispllvl + 8) + 2 * player._pLevel;
-	skeleton.minDamage = 2 * (missile._mispllvl + 4);
-	skeleton.maxDamage = 2 * (missile._mispllvl + 8);
-	skeleton.flags |= MFLAG_GOLEM;
-	skeleton.ai = MonsterAIID::Golem;
-	StartSpecialStand(skeleton, Direction::South);
-	UpdateEnemy(skeleton);
-	if (&player == MyPlayer) {
-		NetSendCmdSkeleton(
-		    skeleton.position.tile.x,
-		    skeleton.position.tile.y,
-		    skeleton.direction,
-		    skeleton.enemy,
-		    skeleton.hitPoints,
-		    GetLevelForMultiplayer(player));
 	}
 }
 

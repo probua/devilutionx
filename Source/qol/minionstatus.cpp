@@ -7,6 +7,7 @@
 #include "engine/render/primitive_render.hpp"
 #include "engine/render/text_render.hpp"
 #include "levels/gendung.h"
+#include "minion_ai.h"
 #include "missiles.h"
 #include "monster.h"
 #include "multi.h"
@@ -25,9 +26,6 @@ constexpr int BarMaxWidth = 120;
 constexpr int BarHeight = 3;
 
 #ifdef _DEBUG
-constexpr int DebugMaxMinionReturnDistance = 8;
-constexpr int DebugMinionEngageRange = 5;
-
 string_view GetMinionAiState(const Monster &minion)
 {
 	if (minion.mode == MonsterMode::Death)
@@ -37,22 +35,16 @@ string_view GetMinionAiState(const Monster &minion)
 	if (IsMonsterModeMove(minion.mode))
 		return "WALK";
 
-	size_t ownerId = minion.getId();
-	if (ownerId >= MAX_PLRS)
-		ownerId -= MAX_PLRS;
-
-	int distToOwner = minion.position.tile.WalkingDistance(Players[ownerId].position.future);
-
-	if (distToOwner > DebugMaxMinionReturnDistance)
+	switch (minion.var1) {
+	case MinionStateFollow:
 		return "FOLLOW";
-
-	if ((minion.flags & MFLAG_NO_ENEMY) == 0) {
-		int distToEnemy = minion.position.tile.WalkingDistance(Monsters[minion.enemy].position.tile);
-		if (distToEnemy <= DebugMinionEngageRange)
-			return "CHASE";
+	case MinionStateChase:
+		return "CHASE";
+	case MinionStateIdle:
+		return "IDLE";
+	default:
+		return "";
 	}
-
-	return "IDLE";
 }
 #endif
 

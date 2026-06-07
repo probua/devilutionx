@@ -42,6 +42,7 @@ GetVirtualLevel() en Source/levels/gendung.h
 | `Source/interfac.cpp` | Cutscenes (nivel 7 = Diablo) |
 | `Source/monstdat.cpp` | 93 monstruos remapeados (minDunLvl/maxDunLvl) |
 | `Source/monster.cpp` | `GetLevelMTypes()`, `InitMonsters()`, Lazarus/Leoric removidos de nivel principal en MP |
+| `Source/minion_ai.cpp` / `.h` | `GolumAi`, `PickMinionTarget()`, `MoveToward()`, `ActivateNearbyMonsters()`, `InitGolems`, `InitSkeletons`, `PreSpawnSkeleton`, `SpawnGolem`, `SpawnSkeleton` (movidos desde `monster.cpp`) |
 | `Source/quests.cpp` | `QuestsData[]` (Q_BLIND→3, Q_BLOOD→4), `InitQuests()` (9 quests desactivadas), `CheckQuests()` (portal rojo MP, anti-re-entrada), `ResyncMPQuests()` (sin auto-activate Lazarus) |
 | `Source/towners.cpp` | `_pLvlVisited` dinámico, Cain acepta Staff en MP |
 | `Source/objects.cpp` | Story books (2,4,6), `InitObjectGFX()` con GetVirtualLevel(), Staff pedestal en MP, `AddLazStand()` sin guard MP |
@@ -205,7 +206,8 @@ Forzadas a QUEST_NOTAVAIL en InitQuests().
 | `Source/panels/spell_icons.cpp` | `SpellITbl[37] = 24`, array 53 entradas |
 | `Source/misdat.cpp` | `MissilesData[Skeleton]` con AddSkeleton |
 | `Source/missiles.cpp` / `.h` | `AddSkeleton()` |
-| `Source/monster.cpp` / `.h` | skeletonTypeIndex, InitSkeletons, SpawnSkeleton (type force), KillMySkeleton, GolumAi leash (3 estados), DeleteMonsterList skeleton loop, SetMapMonsters slot reservation, golem idle freeze |
+| `Source/monster.cpp` / `.h` | skeletonTypeIndex, KillMySkeleton, DeleteMonsterList skeleton loop, SetMapMonsters slot reservation, golem idle freeze |
+| `Source/minion_ai.cpp` / `.h` | `GolumAi` (3 estados via `var1`), `PickMinionTarget`, `MoveToward`, `ActivateNearbyMonsters`, `InitGolems`, `InitSkeletons`, `PreSpawnSkeleton`, `SpawnGolem`, `SpawnSkeleton` (movidos desde `monster.cpp`) |
 | `Source/automap.cpp` | DrawAutomapMinion — golem y esqueleto visibles en automapa (flecha verde) |
 | `Source/qol/minionstatus.cpp` / `.h` | DrawMinionStatus — HUD centrado con icono + barra HP + debug state para golem/esqueleto |
 | `Source/engine/render/scrollrt.cpp` | Llamada a DrawMinionStatus después de DrawXPBar |
@@ -243,11 +245,11 @@ Forzadas a QUEST_NOTAVAIL en InitQuests().
 - Probar Telekinesis rework (knockback 2 tiles + stun)
 - Verificar dropeo de libros por tier en cada nivel de mazmorra
 - Agregar stubs para hechizos no implementados (DoomSerpents, BloodRitual, Invisibility) si crashean
-- Probar IA de leash de golem/esqueleto (dejar perseguir a 8, volver a 12)
+- Probar IA de leash de golem/esqueleto (PickMinionTarget, MoveToward, estados via var1)
 
 ## Minion leash (golem/esqueleto)
 
-La IA `GolumAi` tiene tres estados de comportamiento:
+La IA `GolumAi` vive en `Source/minion_ai.cpp` / `Source/minion_ai.h` (separado de `monster.cpp`). Tiene tres estados de comportamiento almacenados en `var1`:
 
 ### Constantes
 
@@ -257,32 +259,61 @@ La IA `GolumAi` tiene tres estados de comportamiento:
 | `MinionEngageRange` | 5 | Rango para detectar enemigos y entrar en combate |
 | `MinionIdleDelay` | 4 | Ticks entre pasos en FOLLOW (~5 pasos/seg) |
 
-### Estados
+### Estados (var1)
 
-| Condición | Estado | Comportamiento |
-|---|---|---|
-| `distToOwner > 8` | **FOLLOW** | Pathfind hacia el dueño con delay de 4 ticks. Fallback a RandomWalk |
-| `distToOwner ≤ 8` + enemigo a ≤5 tiles | **CHASE** | Pathfind hacia enemigo, atacar si adyacente |
-| `distToOwner ≤ 8` + sin enemigo cercano | **IDLE** | Quieto, mirando al dueño |
+| var1 | Estado | Condición | Comportamiento |
+|---|---|---|---|
+| 0 | **FOLLOW** | `distToOwner > 8` | Pathfind hacia el dueño con delay de 4 ticks. Fallback a RandomWalk |
+| 1 | **CHASE** | Dueño amenazado (monstruo atacándolo a ≤5 tiles del dueño) | Prioriza atacar al enemigo que amenaza al dueño |
+| 1 | **CHASE** | `distToOwner ≤ 8` + enemigo a ≤5 tiles del minion | Pathfind hacia enemigo, atacar si adyacente |
+| 2 | **IDLE** | `distToOwner ≤ 8` + sin enemigo cercano | Quieto, mirando al dueño |
+
+### Target selection — `PickMinionTarget()`
+
+Reemplaza `UpdateEnemy()` y `FindOwnerThreat()` para minions. Prioridades:
+1. **Dueño amenazado**: monstruos targeteando al dueño a ≤5 tiles del dueño
+2. **Enemigo más cercano**: monstruo más cercano al minion a ≤8 tiles (`MaxMinionReturnDistance`)
+3. **Sin target** → estado IDLE
+
+No usa `MFLAG_TARGETS_MONSTER` ni `MFLAG_NO_ENEMY`.
+
+### Movement — `MoveToward()`
+
+Helper que encapsula: `AiPlanPathTo()` → si falla → `RandomWalk()` hacia target. Aplica en FOLLOW y CHASE.
+
+### `ActivateNearbyMonsters()`
+
+Helper que activa monstruos cercanos cuando el minion ataca, para evitar que el minion pelee solo contra un grupo inactivo.
 
 ### Transiciones
 
-- `UpdateEnemy()` corre cada tick → detección de enemigos es instantánea (~50ms)
+- `PickMinionTarget()` corre cada tick → detección de enemigos es instantánea (~50ms)
 - `var2` se usa como contador de delay en FOLLOW
-- Al detectar enemigo: `var2 = 0`, modo activo inmediato
-- Al perder enemigo: transición a IDLE en el siguiente tick
-
-### Pathfinding
-
-`AiPlanPathTo(golem, ownerPosition)` usa BFS (`FindPath`) para navegar alrededor de paredes. Fallback a `RandomWalk` directo si no encuentra ruta. Aplica en FOLLOW.
+- Al detectar enemigo: `var1 = 1` (CHASE), `var2 = 0`, modo activo inmediato
+- Al perder enemigo: `var1 = 2` (IDLE) en el siguiente tick
 
 ### Debug HUD estados
 
-En builds debug (`_DEBUG`), el tag `[STATE]` muestra:
-- `FOLLOW` — distToOwner > 8
-- `CHASE` — enemigo cercano a ≤5 tiles
-- `IDLE` — sin enemigo, mirando al dueño
-- `ATTACK` / `WALK` / `DEAD` — según MonsterMode
+En builds debug (`_DEBUG`), el HUD lee `var1` directamente vía `MinionState` enum:
+- `var1 == 0` → `FOLLOW`
+- `var1 == 1` → `CHASE`
+- `var1 == 2` → `IDLE`
+- Además: `ATTACK` / `WALK` / `DEAD` según `MonsterMode`
+
+### Fix: IA consistente entre minions (AiPlanPath + PickMinionTarget)
+
+**Bug**: El esqueleto nunca perseguía enemigos lejanos, y ambos minions se quedaban quietos cuando el path estaba despejado. El golem "arrancaba" después de matar pero el esqueleto no.
+
+**Root causes**:
+1. `AiPlanPath()` discriminaba por tipo (`MT_GOLEM`) en vez de por rol (minion del jugador). El esqueleto (`MT_WSKELAX`) abortaba por `activeForTicks == 0`.
+2. El CHASE block de `GolumAi` no tenía fallback walk — solo `AiPlanPath`, que falla cuando el path está clear.
+3. `UpdateEnemy()` nunca limpiaba `MFLAG_TARGETS_MONSTER` para minions → `GolumAi` nunca re-buscaba enemigos.
+
+**Fix** (ahora en `Source/minion_ai.cpp`):
+1. `AiPlanPath()`: `monster.type().type != MT_GOLEM` → `(monster.flags & MFLAG_GOLEM) == 0` (2 lugares). Ahora todo minion del jugador usa la misma ruta de código.
+2. `SpawnSkeleton()` + `SpawnGolem()`: agregar `activeForTicks = UINT8_MAX`.
+3. `GolumAi()` CHASE: `MoveToward()` encapsula `AiPlanPath` + `RandomWalk` fallback hacia enemigo.
+4. `PickMinionTarget()` reemplaza `UpdateEnemy()` — selección centralizada, sin flags `MFLAG_TARGETS_MONSTER` / `MFLAG_NO_ENEMY`.
 
 ### Idle freeze (golem)
 
@@ -293,7 +324,7 @@ El golem no tiene sprite de Stand en los assets originales (0 frames). Para que 
 - Al caminar/atacar, `NewMonsterAnim` resetea `ticksPerFrame` al valor normal → animación se reanuda
 - **Solo aplica a `MT_GOLEM`** — el esqueleto (`MT_WSKELAX`) tiene sprites Stand propios
 
-Constantes definidas en `Source/monster.cpp` (namespace anónimo).
+Constantes definidas en `Source/minion_ai.cpp` (namespace anónimo).
 
 ## Minion en automapa (Tab)
 
@@ -324,8 +355,8 @@ Cada cuadro (220x36px) contiene:
 
 En builds debug (`_DEBUG`):
 - **Estado AI** — tag `[STATE]` a la derecha del nombre en color whitegold (`ColorWhitegold`)
-- Estados posibles: `IDLE`, `FOLLOW`, `CHASE`, `RETREAT`, `URGENT`, `ATTACK`, `WALK`, `DEAD`
-- Inferido por `GetMinionAiState()` replicando las mismas condiciones de `GolumAi`
+- Estados posibles: `IDLE`, `FOLLOW`, `CHASE`, `ATTACK`, `WALK`, `DEAD`
+- Leído directamente de `var1` vía `MinionState` enum (sin replicar condiciones de `GolumAi`)
 
 Función `DrawMinionStatus()` en `Source/qol/minionstatus.cpp`, llamada desde `DrawView` en `scrollrt.cpp` después de `DrawXPBar`.
 
