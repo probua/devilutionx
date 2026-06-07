@@ -42,7 +42,7 @@ GetVirtualLevel() en Source/levels/gendung.h
 | `Source/interfac.cpp` | Cutscenes (nivel 7 = Diablo) |
 | `Source/monstdat.cpp` | 93 monstruos remapeados (minDunLvl/maxDunLvl) |
 | `Source/monster.cpp` | `GetLevelMTypes()`, `InitMonsters()`, Lazarus/Leoric removidos de nivel principal en MP |
-| `Source/minion_ai.cpp` / `.h` | `GolumAi`, `PickMinionTarget()`, `MoveToward()`, `ActivateNearbyMonsters()`, `InitGolems`, `InitSkeletons`, `PreSpawnSkeleton`, `SpawnGolem`, `SpawnSkeleton` (movidos desde `monster.cpp`) |
+| `Source/minion_ai.cpp` / `.h` | `GolumAi`, `ScanForEnemy()`, `MoveToward()`, `ActivateNearbyMonsters()`, `ClearMinionTarget()`, `InitGolems`, `InitSkeletons`, `PreSpawnSkeleton`, `SpawnGolem`, `SpawnSkeleton` (movidos desde `monster.cpp`) |
 | `Source/quests.cpp` | `QuestsData[]` (Q_BLIND→3, Q_BLOOD→4), `InitQuests()` (9 quests desactivadas), `CheckQuests()` (portal rojo MP, anti-re-entrada), `ResyncMPQuests()` (sin auto-activate Lazarus) |
 | `Source/towners.cpp` | `_pLvlVisited` dinámico, Cain acepta Staff en MP |
 | `Source/objects.cpp` | Story books (2,4,6), `InitObjectGFX()` con GetVirtualLevel(), Staff pedestal en MP, `AddLazStand()` sin guard MP |
@@ -245,59 +245,63 @@ Forzadas a QUEST_NOTAVAIL en InitQuests().
 - Probar Telekinesis rework (knockback 2 tiles + stun)
 - Verificar dropeo de libros por tier en cada nivel de mazmorra
 - Agregar stubs para hechizos no implementados (DoomSerpents, BloodRitual, Invisibility) si crashean
-- Probar IA de leash de golem/esqueleto (PickMinionTarget, MoveToward, estados via var1)
+- Probar IA de leash de golem/esqueleto (ScanForEnemy, MoveToward, estados via goal)
 
-## Minion leash (golem/esqueleto)
+## Minion AI (golem/esqueleto)
 
-La IA `GolumAi` vive en `Source/minion_ai.cpp` / `Source/minion_ai.h` (separado de `monster.cpp`). Tiene tres estados de comportamiento almacenados en `var1`:
+La IA `GolumAi` vive en `Source/minion_ai.cpp` / `Source/minion_ai.h` (separado de `monster.cpp`). Usa `Monster::goal` para el estado principal y `var1` para sub-estado.
 
-### Constantes
+### States (using `Monster::goal`)
 
-| Constante | Valor | Descripción |
+| `goal` | var1 | Name | When | Behavior |
+|---|---|---|---|---|
+| `MonsterGoal::Normal` | 2 (Idle) | IDLE | Default state | Scans for enemies via `ScanForEnemy()`, faces owner. Transitions to FOLLOW if owner >8 tiles, or CHASE if enemy found |
+| `MonsterGoal::Move` | 0 (Follow) | FOLLOW | Owner >8 tiles away | Walks toward owner with 4-tick delay. Transitions to IDLE when owner ≤6 tiles (hysteresis) |
+| `MonsterGoal::Attack` | 1 (Chase) | CHASE | Enemy visible in same room | Pursues fixed target. Transitions to FOLLOW if owner >8 tiles, IDLE if target dies or >10 tiles away |
+
+### Transitions
+```
+IDLE ──(owner >8)──→ FOLLOW
+IDLE ──(enemy visible)──→ CHASE
+FOLLOW ──(owner ≤6, no enemy)──→ IDLE
+FOLLOW ──(owner ≤6, enemy visible)──→ CHASE
+CHASE ──(owner >8)──→ FOLLOW
+CHASE ──(target dead or >10 tiles)──→ IDLE
+```
+
+### Vision (ScanForEnemy)
+- Only called from IDLE state (not every tick)
+- Filters: `dTransVal` (same room) + `LineClearMissile` (line of sight)
+- Minion cannot detect enemies through walls or doors
+- Prioritizes monsters attacking the owner (threats) within 5 tiles of owner
+- Then nearest enemy within 8 tiles of minion
+- Sets `MFLAG_TARGETS_MONSTER`, `enemy`, `enemyPosition` when found
+
+### ClearMinionTarget
+
+Cuando el minion pierde su target (target muere, se aleja >10 tiles, o dueño >8 tiles), `ClearMinionTarget()` resetea `enemy` al `ownerId` y `enemyPosition` a la posición del dueño. Esto mantiene consistencia con el assert de `ProcessMonsters()` que espera `monster.enemy < MAX_PLRS` cuando `MFLAG_TARGETS_MONSTER` está limpio.
+
+### Sticky target
+- Target is stored in `monster.enemy` and persists across ticks
+- Only recalculated when entering CHASE from IDLE
+- Lost when target dies, target >10 tiles, or owner >8 tiles
+
+### Constants
+
+| Constant | Value | Purpose |
 |---|---|---|
-| `MaxMinionReturnDistance` | 8 | Distancia a la que el minion sigue al dueño |
-| `MinionEngageRange` | 5 | Rango para detectar enemigos y entrar en combate |
-| `MinionIdleDelay` | 4 | Ticks entre pasos en FOLLOW (~5 pasos/seg) |
-
-### Estados (var1)
-
-| var1 | Estado | Condición | Comportamiento |
-|---|---|---|---|
-| 0 | **FOLLOW** | `distToOwner > 8` | Pathfind hacia el dueño con delay de 4 ticks. Fallback a RandomWalk |
-| 1 | **CHASE** | Dueño amenazado (monstruo atacándolo a ≤5 tiles del dueño) | Prioriza atacar al enemigo que amenaza al dueño |
-| 1 | **CHASE** | `distToOwner ≤ 8` + enemigo a ≤5 tiles del minion | Pathfind hacia enemigo, atacar si adyacente |
-| 2 | **IDLE** | `distToOwner ≤ 8` + sin enemigo cercano | Quieto, mirando al dueño |
-
-### Target selection — `PickMinionTarget()`
-
-Reemplaza `UpdateEnemy()` y `FindOwnerThreat()` para minions. Prioridades:
-1. **Dueño amenazado**: monstruos targeteando al dueño a ≤5 tiles del dueño
-2. **Enemigo más cercano**: monstruo más cercano al minion a ≤8 tiles (`MaxMinionReturnDistance`)
-3. **Sin target** → estado IDLE
-
-No usa `MFLAG_TARGETS_MONSTER` ni `MFLAG_NO_ENEMY`.
-
-### Movement — `MoveToward()`
-
-Helper que encapsula: `AiPlanPathTo()` → si falla → `RandomWalk()` hacia target. Aplica en FOLLOW y CHASE.
-
-### `ActivateNearbyMonsters()`
-
-Helper que activa monstruos cercanos cuando el minion ataca, para evitar que el minion pelee solo contra un grupo inactivo.
-
-### Transiciones
-
-- `PickMinionTarget()` corre cada tick → detección de enemigos es instantánea (~50ms)
-- `var2` se usa como contador de delay en FOLLOW
-- Al detectar enemigo: `var1 = 1` (CHASE), `var2 = 0`, modo activo inmediato
-- Al perder enemigo: `var1 = 2` (IDLE) en el siguiente tick
+| `MaxMinionReturnDistance` | 8 | Owner distance to trigger FOLLOW |
+| `MinionFollowHysteresis` | 6 | Owner distance to stop FOLLOW (hysteresis) |
+| `MinionChaseMaxRange` | 10 | Max distance before losing target |
+| `MinionIdleDelay` | 4 | Tick delay between steps in FOLLOW |
+| `MinionEngageRange` | 5 | Range for threat detection near owner |
 
 ### Debug HUD estados
 
-En builds debug (`_DEBUG`), el HUD lee `var1` directamente vía `MinionState` enum:
-- `var1 == 0` → `FOLLOW`
-- `var1 == 1` → `CHASE`
-- `var1 == 2` → `IDLE`
+En builds debug (`_DEBUG`), el HUD lee `goal` y `var1` directamente:
+- `MonsterGoal::Normal` + var1=2 → `IDLE`
+- `MonsterGoal::Move` + var1=0 → `FOLLOW`
+- `MonsterGoal::Attack` + var1=1 → `CHASE`
 - Además: `ATTACK` / `WALK` / `DEAD` según `MonsterMode`
 
 ### Fix: IA consistente entre minions (AiPlanPath + PickMinionTarget)
@@ -313,7 +317,7 @@ En builds debug (`_DEBUG`), el HUD lee `var1` directamente vía `MinionState` en
 1. `AiPlanPath()`: `monster.type().type != MT_GOLEM` → `(monster.flags & MFLAG_GOLEM) == 0` (2 lugares). Ahora todo minion del jugador usa la misma ruta de código.
 2. `SpawnSkeleton()` + `SpawnGolem()`: agregar `activeForTicks = UINT8_MAX`.
 3. `GolumAi()` CHASE: `MoveToward()` encapsula `AiPlanPath` + `RandomWalk` fallback hacia enemigo.
-4. `PickMinionTarget()` reemplaza `UpdateEnemy()` — selección centralizada, sin flags `MFLAG_TARGETS_MONSTER` / `MFLAG_NO_ENEMY`.
+4. `ScanForEnemy()` reemplaza `UpdateEnemy()` — selección centralizada desde IDLE, con filtros de sala (`dTransVal`) + línea de visión (`LineClearMissile`), sin flags `MFLAG_TARGETS_MONSTER` / `MFLAG_NO_ENEMY`.
 
 ### Idle freeze (golem)
 

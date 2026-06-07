@@ -6,6 +6,7 @@
 
 #include "engine/actor_position.hpp"
 #include "engine/random.hpp"
+#include "levels/gendung.h"
 #include "missiles.h"
 #include "monster.h"
 #include "msg.h"
@@ -18,11 +19,14 @@ namespace {
 constexpr int MaxMinionReturnDistance = 8;
 constexpr int MinionEngageRange = 5;
 constexpr int MinionIdleDelay = 4;
+constexpr int MinionChaseMaxRange = 10;
+constexpr int MinionFollowHysteresis = 6;
 
-int PickMinionTarget(Monster &minion, size_t ownerId)
+bool ScanForEnemy(Monster &minion, size_t ownerId)
 {
 	Point ownerPos = Players[ownerId].position.tile;
 	Point minionPos = minion.position.tile;
+	int8_t minionRoom = dTransVal[minionPos.x][minionPos.y];
 	int bestDist = INT_MAX;
 	int bestEnemy = -1;
 	bool bestIsThreat = false;
@@ -37,15 +41,19 @@ int PickMinionTarget(Monster &minion, size_t ownerId)
 			continue;
 		if (monster.position.tile == GolemHoldingCell)
 			continue;
+		if (dTransVal[monster.position.tile.x][monster.position.tile.y] != minionRoom)
+			continue;
+		if (!LineClearMissile(minionPos, monster.position.tile))
+			continue;
+
+		int dist = monster.position.tile.WalkingDistance(minionPos);
+		if (dist > MaxMinionReturnDistance)
+			continue;
 
 		bool isThreat = (monster.flags & MFLAG_NO_ENEMY) == 0
 		    && (monster.flags & MFLAG_TARGETS_MONSTER) == 0
 		    && monster.enemy == static_cast<int>(ownerId)
 		    && monster.position.tile.WalkingDistance(ownerPos) <= MinionEngageRange;
-
-		int dist = monster.position.tile.WalkingDistance(minionPos);
-		if (!isThreat && dist > MaxMinionReturnDistance)
-			continue;
 
 		if (isThreat && !bestIsThreat) {
 			bestDist = dist;
@@ -57,7 +65,15 @@ int PickMinionTarget(Monster &minion, size_t ownerId)
 		}
 	}
 
-	return bestEnemy;
+	if (bestEnemy != -1) {
+		minion.flags &= ~MFLAG_NO_ENEMY;
+		minion.flags |= MFLAG_TARGETS_MONSTER;
+		minion.enemy = bestEnemy;
+		minion.enemyPosition = Monsters[bestEnemy].position.future;
+		return true;
+	}
+
+	return false;
 }
 
 void MoveToward(Monster &monster, Point target)
@@ -92,6 +108,17 @@ void ActivateNearbyMonsters(Monster &minion, Monster &enemy)
 			}
 		}
 	}
+}
+
+void ClearMinionTarget(Monster &minion)
+{
+	size_t ownerId = minion.getId();
+	if (ownerId >= MAX_PLRS)
+		ownerId -= MAX_PLRS;
+	minion.flags |= MFLAG_NO_ENEMY;
+	minion.flags &= ~MFLAG_TARGETS_MONSTER;
+	minion.enemy = static_cast<int>(ownerId);
+	minion.enemyPosition = Players[ownerId].position.future;
 }
 
 } // namespace
@@ -136,6 +163,7 @@ void SpawnGolem(Player &player, Monster &golem, Point position, Missile &missile
 	golem.maxDamage = 2 * (missile._mispllvl + 8);
 	golem.flags |= MFLAG_GOLEM;
 	golem.activeForTicks = UINT8_MAX;
+	golem.goal = MonsterGoal::Normal;
 	StartSpecialStand(golem, Direction::South);
 	UpdateEnemy(golem);
 	if (&player == MyPlayer) {
@@ -171,6 +199,7 @@ void SpawnSkeleton(Player &player, Monster &skeleton, Point position, Missile &m
 	skeleton.flags |= MFLAG_GOLEM;
 	skeleton.ai = MonsterAIID::Golem;
 	skeleton.activeForTicks = UINT8_MAX;
+	skeleton.goal = MonsterGoal::Normal;
 	StartSpecialStand(skeleton, Direction::South);
 	UpdateEnemy(skeleton);
 	if (&player == MyPlayer) {
@@ -198,46 +227,89 @@ void GolumAi(Monster &golem)
 
 	int distToOwner = golem.position.tile.WalkingDistance(Players[ownerId].position.future);
 
-	if (distToOwner > MaxMinionReturnDistance) {
+	switch (golem.goal) {
+
+	case MonsterGoal::Normal: {
+		if (distToOwner > MaxMinionReturnDistance) {
+			golem.goal = MonsterGoal::Move;
+			golem.var1 = MinionStateFollow;
+			golem.var2 = 0;
+			break;
+		}
+		if (ScanForEnemy(golem, ownerId)) {
+			golem.goal = MonsterGoal::Attack;
+			golem.var1 = MinionStateChase;
+			golem.var2 = 0;
+			break;
+		}
+		golem.var1 = MinionStateIdle;
+		golem.direction = GetDirection(golem.position.tile, Players[ownerId].position.tile);
+		break;
+	}
+
+	case MonsterGoal::Move: {
+		if (distToOwner <= MinionFollowHysteresis) {
+			golem.goal = MonsterGoal::Normal;
+			golem.var1 = MinionStateIdle;
+			golem.var2 = 0;
+			break;
+		}
 		golem.var1 = MinionStateFollow;
 		golem.var2++;
-		if (golem.var2 < MinionIdleDelay)
-			return;
-		golem.var2 = 0;
-		MoveToward(golem, Players[ownerId].position.tile);
-		return;
+		if (golem.var2 >= MinionIdleDelay) {
+			golem.var2 = 0;
+			MoveToward(golem, Players[ownerId].position.tile);
+		}
+		break;
 	}
 
-	int target = PickMinionTarget(golem, ownerId);
+	case MonsterGoal::Attack: {
+		if (distToOwner > MaxMinionReturnDistance) {
+			golem.goal = MonsterGoal::Move;
+			golem.var1 = MinionStateFollow;
+			golem.var2 = 0;
+			ClearMinionTarget(golem);
+			break;
+		}
+		Monster &enemy = Monsters[golem.enemy];
+		if ((enemy.hitPoints >> 6) <= 0) {
+			golem.goal = MonsterGoal::Normal;
+			golem.var1 = MinionStateIdle;
+			golem.var2 = 0;
+			ClearMinionTarget(golem);
+			break;
+		}
+		int distToEnemy = golem.position.tile.WalkingDistance(enemy.position.tile);
+		if (distToEnemy > MinionChaseMaxRange) {
+			golem.goal = MonsterGoal::Normal;
+			golem.var1 = MinionStateIdle;
+			golem.var2 = 0;
+			ClearMinionTarget(golem);
+			break;
+		}
 
-	if (target == -1) {
-		golem.flags |= MFLAG_NO_ENEMY;
-		golem.flags &= ~MFLAG_TARGETS_MONSTER;
+		golem.enemyPosition = enemy.position.future;
+		golem.direction = GetDirection(golem.position.tile, enemy.position.tile);
+
+		int mex = abs(golem.position.tile.x - enemy.position.future.x);
+		int mey = abs(golem.position.tile.y - enemy.position.future.y);
+		if (mex < 2 && mey < 2) {
+			golem.enemyPosition = enemy.position.tile;
+			ActivateNearbyMonsters(golem, enemy);
+			StartAttack(golem);
+			break;
+		}
+
+		MoveToward(golem, enemy.position.tile);
+		break;
+	}
+
+	default:
+		golem.goal = MonsterGoal::Normal;
 		golem.var1 = MinionStateIdle;
 		golem.var2 = 0;
-		golem.direction = GetDirection(golem.position.tile, Players[ownerId].position.tile);
-		return;
+		break;
 	}
-
-	golem.flags &= ~MFLAG_NO_ENEMY;
-	golem.flags |= MFLAG_TARGETS_MONSTER;
-	golem.enemy = target;
-	golem.enemyPosition = Monsters[target].position.future;
-	golem.var1 = MinionStateChase;
-	golem.var2 = 0;
-	Monster &enemy = Monsters[target];
-	golem.direction = GetDirection(golem.position.tile, enemy.position.tile);
-
-	int mex = abs(golem.position.tile.x - enemy.position.future.x);
-	int mey = abs(golem.position.tile.y - enemy.position.future.y);
-	if (mex < 2 && mey < 2) {
-		golem.enemyPosition = enemy.position.tile;
-		ActivateNearbyMonsters(golem, enemy);
-		StartAttack(golem);
-		return;
-	}
-
-	MoveToward(golem, enemy.position.tile);
 }
 
 } // namespace devilution

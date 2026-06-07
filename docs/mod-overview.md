@@ -110,7 +110,7 @@ Eliminadas via `QUEST_NOTAVAIL` forzado en `InitQuests()`.
 | `Source/misdat.cpp` | Spells | `MissilesData[Skeleton]` con AddSkeleton |
 | `Source/missiles.cpp` / `.h` | Spells | `AddSkeleton()`, 15 damage formulas con `GetVirtualLevel()` |
 | `Source/monster.cpp` / `.h` | Spells + Minions | skeletonTypeIndex, KillMySkeleton, SetMapMonsters slot reservation, golem idle freeze |
-| `Source/minion_ai.cpp` / `.h` | Minions | `GolumAi` (3 estados via `var1`), `PickMinionTarget`, `MoveToward`, `ActivateNearbyMonsters`, `InitGolems`, `InitSkeletons`, `PreSpawnSkeleton`, `SpawnGolem`, `SpawnSkeleton` (movidos desde `monster.cpp`) |
+| `Source/minion_ai.cpp` / `.h` | Minions | `GolumAi` (3 estados via `goal`), `ScanForEnemy`, `MoveToward`, `ActivateNearbyMonsters`, `ClearMinionTarget`, `InitGolems`, `InitSkeletons`, `PreSpawnSkeleton`, `SpawnGolem`, `SpawnSkeleton` (movidos desde `monster.cpp`) |
 | `Source/automap.cpp` | Minions | `DrawAutomapMinion()` — golem y esqueleto visibles en automapa (flecha verde) |
 | `Source/qol/minionstatus.cpp` / `.h` | Minions | `DrawMinionStatus()` — HUD centrado con icono + barra HP + debug state |
 | `Source/engine/render/scrollrt.cpp` | Minions | Llamada a `DrawMinionStatus` después de `DrawXPBar` |
@@ -129,33 +129,42 @@ Eliminadas via `QUEST_NOTAVAIL` forzado en `InitQuests()`.
 
 ### Minions (Golem y Raise Skeleton)
 
-Ambos minions usan la misma IA (`GolumAi`) con un sistema de **leash** (correa) simplificado con 3 estados. La IA vive en `Source/minion_ai.cpp` / `Source/minion_ai.h` (separado de `monster.cpp`). Los estados se almacenan en `var1` (0=FOLLOW, 1=CHASE, 2=IDLE).
+Ambos minions usan la misma IA (`GolumAi`) con un sistema de estados basado en `Monster::goal`. La IA vive en `Source/minion_ai.cpp` / `Source/minion_ai.h` (separado de `monster.cpp`).
 
-#### Constantes
+#### States (using `Monster::goal`)
 
-| Constante | Valor | Descripción |
+| `goal` | var1 | Name | When | Behavior |
+|---|---|---|---|---|
+| `MonsterGoal::Normal` | 2 (Idle) | IDLE | Default state | Scans for enemies via `ScanForEnemy()`, faces owner. Transitions to FOLLOW if owner >8 tiles, or CHASE if enemy found |
+| `MonsterGoal::Move` | 0 (Follow) | FOLLOW | Owner >8 tiles away | Walks toward owner with 4-tick delay. Transitions to IDLE when owner ≤6 tiles (hysteresis) |
+| `MonsterGoal::Attack` | 1 (Chase) | CHASE | Enemy visible in same room | Pursues fixed target. Transitions to FOLLOW if owner >8 tiles, IDLE if target dies or >10 tiles away |
+
+#### Transitions
+```
+IDLE ──(owner >8)──→ FOLLOW
+IDLE ──(enemy visible)──→ CHASE
+FOLLOW ──(owner ≤6, no enemy)──→ IDLE
+FOLLOW ──(owner ≤6, enemy visible)──→ CHASE
+CHASE ──(owner >8)──→ FOLLOW
+CHASE ──(target dead or >10 tiles)──→ IDLE
+```
+
+#### Vision (ScanForEnemy)
+- Only called from IDLE state (not every tick)
+- Filters: `dTransVal` (same room) + `LineClearMissile` (line of sight)
+- Minion cannot detect enemies through walls or doors
+- Prioritizes threats to owner (≤5 tiles), then nearest enemy (≤8 tiles)
+- Target is sticky — persists until lost (dead, >10 tiles, or owner >8 tiles)
+
+#### Constants
+
+| Constant | Value | Purpose |
 |---|---|---|
-| `MaxMinionReturnDistance` | 8 | Distancia a la que el minion sigue al dueño |
-| `MinionEngageRange` | 5 | Rango de detección de enemigos |
-| `MinionIdleDelay` | 4 | Ticks entre pasos en FOLLOW (~5 pasos/seg a 20 ticks/seg) |
-
-#### Estados (var1)
-
-| var1 | Estado | Condición | Comportamiento |
-|---|---|---|---|
-| 0 | **FOLLOW** | `distToOwner > 8` | Pathfind hacia el dueño con delay. Fallback a RandomWalk |
-| 1 | **CHASE** | Dueño amenazado (monstruo atacándolo a ≤5 tiles del dueño) | Prioriza atacar al enemigo que amenaza al dueño |
-| 1 | **CHASE** | `distToOwner ≤ 8` + enemigo a ≤5 | Perseguir enemigo con pathfind, atacar si adyacente |
-| 2 | **IDLE** | `distToOwner ≤ 8` + sin enemigo | Quieto, mirando al dueño |
-
-Los minions priorizan: (1) proteger al dueño de amenazas (`PickMinionTarget`), (2) atacar enemigos cercanos, (3) quedarse quietos.
-
-#### Pathfinding
-
-- `MoveToward(Monster&, Point)` — helper que encapsula `AiPlanPathTo()` + `RandomWalk()` fallback
-- `PickMinionTarget(Monster&)` — selección centralizada de target (reemplaza `UpdateEnemy` y `FindOwnerThreat`)
-- `ActivateNearbyMonsters(Monster&)` — activa monstruos cercanos al atacar
-- El minion nunca usa Teleport, solo camina (preserva sincronización en MP)
+| `MaxMinionReturnDistance` | 8 | Owner distance to trigger FOLLOW |
+| `MinionFollowHysteresis` | 6 | Owner distance to stop FOLLOW (hysteresis) |
+| `MinionChaseMaxRange` | 10 | Max distance before losing target |
+| `MinionIdleDelay` | 4 | Tick delay between steps in FOLLOW |
+| `MinionEngageRange` | 5 | Range for threat detection near owner |
 
 #### Idle freeze (golem)
 
