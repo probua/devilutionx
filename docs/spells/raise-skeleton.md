@@ -132,35 +132,59 @@ Los slots `Monsters[0..3]` (golems) y `Monsters[4..7]` (esqueletos) deben estar 
 
 ## IA
 
-El esqueleto usa la misma IA que el golem (`GolumAi`) con un sistema de **leash** simplificado con 3 estados:
+El esqueleto y el golem comparten la misma IA (`GolumAi` en `Source/minion_ai.cpp`) con un sistema de **leash + formación**.
+
+### Sistema de formación
+
+Los minions mantienen una posición de formación relativa al owner, calculada por `GetFormationPosition()`:
+
+- **3 tiles adelante** del owner (en la dirección `owner._pdir`)
+- **1 tile lateral**: Golem a la **izquierda** (`Left(dir)`), Esqueleto a la **derecha** (`Right(dir)`)
+- La posición base es `owner.position.future` (donde el owner se dirige), no `position.tile` (donde está)
+
+Ejemplo con owner en `(10, 10)` mirando South (forward=(1,1), golem lateral=SouthEast=(1,0), esqueleto lateral=SouthWest=(0,1)):
+- Golem target: `(10+3+1, 10+3+0)` = `(14, 13)`
+- Esqueleto target: `(10+3+0, 10+3+1)` = `(13, 14)`
 
 ### Estados
 
-| Condición | Estado | Comportamiento |
+| Estado | Comportamiento |
+|---|---|
+| **Normal (Idle)** | Si hay enemigo → Attack (prioridad). Si lejos de formación → Move. Si no, idle mirando a formación. |
+| **Move (Follow)** | Scan de enemigos primero (si hay → Attack). Luego se mueve hacia la posición de formación cada tick disponible. Para cuando distToFormation ≤ 2. |
+| **Attack (Chase)** | Persigue y ataca al enemigo. Abandona si distToOwner > 6 (leash de combate). |
+
+### Constantes (`Source/minion_ai.cpp`, namespace anónimo)
+
+| Constante | Valor | Descripción |
 |---|---|---|
-| `distToOwner > 8` | **FOLLOW** | Pathfind hacia el dueño con delay de 4 ticks. Fallback a RandomWalk |
-| `distToOwner ≤ 8` + enemigo a ≤5 tiles | **CHASE** | Perseguir enemigo con `AiPlanPath`, atacar si adyacente (`StartAttack`) |
-| `distToOwner ≤ 8` + sin enemigo cercano | **IDLE** | Quieto, mirando al dueño |
+| `MaxMinionReturnDistance` | 4 | Rango de detección de enemigos (ScanForEnemy) |
+| `MinionEngageRange` | 3 | Rango desde el owner para considerar un enemigo como "amenaza" |
+| `MinionIdleDelay` | 1 | Ticks entre pasos en Move (1 = movimiento continuo) |
+| `MinionChaseMaxRange` | 6 | Distancia máxima de persecución antes de rendirse |
+| `MinionFollowHysteresis` | 2 | Distancia a formación para dejar de seguir |
+| `MinionCombatLeash` | 6 | Distancia máxima del owner durante combate antes de volver |
+
+### Prioridades de decisión
+
+En estado `Normal`: **1° Attack** (ScanForEnemy) → **2° Move** (formación) → **3° Idle**
+
+En estado `Move`: **1° Attack** (ScanForEnemy) → **2° seguir formación**
+
+Esto previene que el minion ignore enemigos mientras sigue al owner.
 
 ### Pathfinding
 
-- `AiPlanPathTo(Monster&, Point)` — BFS (`FindPath`) hacia la posición del dueño, con fallback a `RandomWalk` directo si no encuentra ruta
-- `var2` se usa como contador de delay entre pasos en FOLLOW
+- `AiPlanPathTo(Monster&, Point)` — BFS (`FindPath`) hacia la posición objetivo, con fallback a `RandomWalk`
+- `MinionIdleDelay = 1` → el minion se mueve cada tick que no está en animación de caminata
 - El minion **nunca usa Teleport** — solo camina, lo que preserva la sincronización en MP
 
 ### Transiciones
 
-- `UpdateEnemy()` corre cada tick → detección de enemigos es instantánea (~50ms)
-- Al detectar enemigo: `var2 = 0`, modo activo inmediato
-- Al perder enemigo: transición a IDLE en el siguiente tick
-
-### Constantes definidas en `Source/monster.cpp` (namespace anónimo)
-
-| Constante | Valor | Descripción |
-|---|---|---|
-| `MaxMinionReturnDistance` | 8 | Distancia a la que el minion sigue al dueño |
-| `MinionEngageRange` | 5 | Rango de detección de enemigos |
-| `MinionIdleDelay` | 4 | Ticks entre pasos en FOLLOW |
+- `ScanForEnemy()` corre en estados Normal y Move → detección rápida de enemigos
+- Al detectar enemigo: transición inmediata a Attack
+- Al perder enemigo (muerto, fuera de rango, o leash): vuelve a Normal
+- Al abandonar combate (leash): `ClearMinionTarget()` y vuelta a Move
 
 ## Visibilidad
 
@@ -204,7 +228,8 @@ El esqueleto tiene un cuadro de estado centrado sobre el panel principal:
 - `Source/misdat.cpp` — 1 línea
 - `Source/missiles.cpp` — 1 función
 - `Source/missiles.h` — 1 declaración
-- `Source/monster.cpp` — 7 secciones + IA leash simplificada (3 estados: FOLLOW/CHASE/IDLE) + slot reservation en set levels + idle freeze golem
+- `Source/monster.cpp` — 7 secciones + slot reservation en set levels + idle freeze golem
+- `Source/minion_ai.cpp` — IA de minions con formación (3 forward + 1 lateral), leash de combate, ScanForEnemy en Move
 - `Source/monster.h` — 3 declaraciones
 - `Source/automap.cpp` — `DrawAutomapMinion()` (flecha verde en automapa)
 - `Source/qol/minionstatus.cpp` — `DrawMinionStatus()` (HUD icono + barra HP + debug state)
