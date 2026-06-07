@@ -5,22 +5,44 @@
 #include <algorithm>
 
 #include "engine/actor_position.hpp"
+#include "engine/displacement.hpp"
+#include "engine/direction.hpp"
 #include "engine/random.hpp"
 #include "levels/gendung.h"
 #include "missiles.h"
 #include "monster.h"
 #include "msg.h"
+#include "player.h"
 #include "spelldat.h"
 
 namespace devilution {
 
 namespace {
 
-constexpr int MaxMinionReturnDistance = 8;
-constexpr int MinionEngageRange = 5;
-constexpr int MinionIdleDelay = 4;
-constexpr int MinionChaseMaxRange = 10;
-constexpr int MinionFollowHysteresis = 6;
+constexpr int MaxMinionReturnDistance = 4;
+constexpr int MinionEngageRange = 3;
+constexpr int MinionIdleDelay = 1;
+constexpr int MinionChaseMaxRange = 6;
+constexpr int MinionFollowHysteresis = 2;
+constexpr int MinionCombatLeash = 6;
+
+Point GetFormationPosition(size_t ownerId, size_t monsterId)
+{
+	Player &owner = Players[ownerId];
+	Direction facing = owner._pdir;
+	if (facing == Direction::NoDirection)
+		facing = Direction::South;
+
+	Displacement forward(facing);
+	forward.deltaX *= 3;
+	forward.deltaY *= 3;
+
+	bool isSkeleton = monsterId >= MAX_PLRS;
+	Direction lateralDir = isSkeleton ? Right(facing) : Left(facing);
+	Displacement lateral(lateralDir);
+
+	return owner.position.future + forward + lateral;
+}
 
 bool ScanForEnemy(Monster &minion, size_t ownerId)
 {
@@ -226,29 +248,37 @@ void GolumAi(Monster &golem)
 		ownerId -= MAX_PLRS;
 
 	int distToOwner = golem.position.tile.WalkingDistance(Players[ownerId].position.future);
+	Point formationPos = GetFormationPosition(ownerId, golem.getId());
+	int distToFormation = golem.position.tile.WalkingDistance(formationPos);
 
 	switch (golem.goal) {
 
 	case MonsterGoal::Normal: {
-		if (distToOwner > MaxMinionReturnDistance) {
-			golem.goal = MonsterGoal::Move;
-			golem.var1 = MinionStateFollow;
-			golem.var2 = 0;
-			break;
-		}
 		if (ScanForEnemy(golem, ownerId)) {
 			golem.goal = MonsterGoal::Attack;
 			golem.var1 = MinionStateChase;
 			golem.var2 = 0;
 			break;
 		}
+		if (distToFormation > MinionFollowHysteresis) {
+			golem.goal = MonsterGoal::Move;
+			golem.var1 = MinionStateFollow;
+			golem.var2 = 0;
+			break;
+		}
 		golem.var1 = MinionStateIdle;
-		golem.direction = GetDirection(golem.position.tile, Players[ownerId].position.tile);
+		golem.direction = GetDirection(golem.position.tile, formationPos);
 		break;
 	}
 
 	case MonsterGoal::Move: {
-		if (distToOwner <= MinionFollowHysteresis) {
+		if (ScanForEnemy(golem, ownerId)) {
+			golem.goal = MonsterGoal::Attack;
+			golem.var1 = MinionStateChase;
+			golem.var2 = 0;
+			break;
+		}
+		if (distToFormation <= MinionFollowHysteresis) {
 			golem.goal = MonsterGoal::Normal;
 			golem.var1 = MinionStateIdle;
 			golem.var2 = 0;
@@ -258,13 +288,13 @@ void GolumAi(Monster &golem)
 		golem.var2++;
 		if (golem.var2 >= MinionIdleDelay) {
 			golem.var2 = 0;
-			MoveToward(golem, Players[ownerId].position.tile);
+			MoveToward(golem, formationPos);
 		}
 		break;
 	}
 
 	case MonsterGoal::Attack: {
-		if (distToOwner > MaxMinionReturnDistance) {
+		if (distToOwner > MinionCombatLeash) {
 			golem.goal = MonsterGoal::Move;
 			golem.var1 = MinionStateFollow;
 			golem.var2 = 0;
