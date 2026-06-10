@@ -2,6 +2,7 @@
 
 #include <string_view>
 
+#include "automap.h"
 #include "control.h"
 #include "engine/palette.h"
 #include "engine/render/primitive_render.hpp"
@@ -127,13 +128,22 @@ void DrawMinionStatus(const Surface &out)
 
 	constexpr int gap = 4;
 
-	int totalWidth = (hasSkeleton && hasGolem) ? 2 * BoxWidth + gap : BoxWidth;
-	int x = (out.w() - totalWidth) / 2;
+	int x = 8;
 	int y = 4;
+	if (AutomapActive) {
+		int automapBottom = 8;
+		automapBottom += 15;
+		automapBottom += 15;
+		if (gbIsMultiplayer) {
+			automapBottom += 15;
+			automapBottom += 15;
+		}
+		y = automapBottom + 4;
+	}
 
 	if (hasSkeleton) {
 		DrawMinionBox(out, { x, y }, skeleton, SpellID::Skeleton, "Skeleton");
-		x += BoxWidth + gap;
+		y += BoxHeight + gap;
 	}
 
 	if (hasGolem)
