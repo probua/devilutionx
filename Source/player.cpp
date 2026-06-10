@@ -15,6 +15,7 @@
 #ifdef _DEBUG
 #include "debug.h"
 #endif
+#include "diablo.h"
 #include "engine/backbuffer_state.hpp"
 #include "engine/load_cl2.hpp"
 #include "engine/load_file.hpp"
@@ -1065,6 +1066,13 @@ bool DoSpell(Player &player)
 
 		if (IsAnyOf(player.executedSpell.spellType, SpellType::Scroll, SpellType::Charges)) {
 			EnsureValidReadiedSpell(player);
+		}
+
+		if (IsAnyOf(player.executedSpell.spellType, SpellType::Spell, SpellType::Charges)) {
+			uint16_t cd = GetSpellData(player.executedSpell.spellId).sCooldown;
+			if (cd > 0) {
+				player.spellCooldownStart[static_cast<int>(player.executedSpell.spellId)] = gGameTicks;
+			}
 		}
 	}
 
@@ -2901,6 +2909,10 @@ void RemovePlrMissiles(const Player &player)
 			Monsters[missile.var2].mode = static_cast<MonsterMode>(missile.var1);
 		}
 	}
+
+	if (&player == MyPlayer) {
+		memset(MyPlayer->spellCooldownStart, 0, sizeof(MyPlayer->spellCooldownStart));
+	}
 }
 
 #if defined(__clang__) || defined(__GNUC__)
@@ -3193,6 +3205,20 @@ void CheckPlrSpell(bool isShiftHeld, SpellID spellID, SpellType spellType)
 	if (leveltype == DTYPE_TOWN && !GetSpellData(spellID).isAllowedInTown()) {
 		myPlayer.Say(HeroSpeech::ICantCastThatHere);
 		return;
+	}
+
+	if (myPlayer._pmode == PM_SPELL)
+		return;
+
+	if (IsAnyOf(spellType, SpellType::Spell, SpellType::Charges)) {
+		uint16_t cd = GetSpellData(spellID).sCooldown;
+		if (cd > 0) {
+			int idx = static_cast<int>(spellID);
+			if (myPlayer.spellCooldownStart[idx] != 0
+			    && (gGameTicks - myPlayer.spellCooldownStart[idx]) < cd) {
+				return;
+			}
+		}
 	}
 
 	SpellCheckResult spellcheck = SpellCheckResult::Success;

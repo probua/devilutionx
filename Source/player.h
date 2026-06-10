@@ -339,6 +339,7 @@ struct Player {
 	SpellType _pRSplType;
 	SpellID _pSBkSpell;
 	uint8_t _pSplLvl[64];
+	uint32_t spellCooldownStart[64];
 	/** @brief Bitmask of staff spell */
 	uint64_t _pISpells;
 	/** @brief Bitmask of learned spells */

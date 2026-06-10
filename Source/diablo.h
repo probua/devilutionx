@@ -69,6 +69,7 @@ extern bool cineflag;
 /* These are defined in fonts.h */
 extern void FontsCleanup();
 extern DVL_API_FOR_TEST int PauseMode;
+extern uint32_t gGameTicks;
 extern bool gbBard;
 extern bool gbBarbarian;
 /**

@@ -125,12 +125,11 @@ void DrawMinionStatus(const Surface &out)
 	if (!hasSkeleton && !hasGolem)
 		return;
 
-	const Rectangle &panel = GetMainPanel();
 	constexpr int gap = 4;
 
 	int totalWidth = (hasSkeleton && hasGolem) ? 2 * BoxWidth + gap : BoxWidth;
-	int x = panel.position.x + (panel.size.width - totalWidth) / 2;
-	int y = panel.position.y - BoxHeight - 4;
+	int x = (out.w() - totalWidth) / 2;
+	int y = 4;
 
 	if (hasSkeleton) {
 		DrawMinionBox(out, { x, y }, skeleton, SpellID::Skeleton, "Skeleton");

@@ -18,7 +18,6 @@
 #include "utils/language.h"
 #include "utils/str_cat.hpp"
 #include "utils/utf8.hpp"
-
 #define SPLROWICONLS 10
 
 namespace devilution {

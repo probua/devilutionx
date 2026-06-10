@@ -2,12 +2,15 @@
 
 #include <cstdint>
 
+#include <fmt/format.h>
+
 #include "engine.h"
 #include "engine/load_cel.hpp"
 #include "engine/load_clx.hpp"
 #include "engine/palette.h"
 #include "engine/render/clx_render.hpp"
 #include "engine/render/primitive_render.hpp"
+#include "engine/render/text_render.hpp"
 #include "init.h"
 #include "utils/stdcompat/optional.hpp"
 
@@ -216,6 +219,26 @@ void SetSpellTrans(SpellType t)
 	case SpellType::Skill:
 		break;
 	}
+}
+
+void DrawCooldownOverlay(const Surface &out, Point position, float progress, float remainingSeconds)
+{
+	const int width = SPLICONLENGTH;
+	const int height = (*LargeSpellIcons)[0].height();
+	int x = position.x;
+	int y = position.y - height;
+
+	DrawHalfTransparentRectTo(out, x, y, width, height);
+
+	char text[16];
+	auto end = fmt::format_to(text, "{:.1f}", remainingSeconds);
+	*end = '\0';
+
+	int textWidth = GetLineWidth(text, GameFont12);
+	int textX = x + (width - textWidth) / 2;
+	int textY = y + (height - GetLineHeight(text, GameFont12)) / 2;
+
+	DrawString(out, text, Point { textX, textY }, { .flags = UiFlags::ColorWhite | UiFlags::Outlined });
 }
 
 } // namespace devilution

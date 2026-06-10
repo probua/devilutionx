@@ -37,6 +37,7 @@
 #include "qol/floatingnumbers.h"
 #include "qol/itemlabels.h"
 #include "qol/minionstatus.h"
+#include "qol/cooldown_hud.h"
 #include "qol/monhealthbar.h"
 #include "qol/stash.h"
 #include "qol/xpbar.h"
@@ -1713,6 +1714,7 @@ void DrawAndBlit()
 	}
 	DrawXPBar(out);
 	DrawMinionStatus(out);
+	DrawCooldownHud(out);
 	if (*sgOptions.Gameplay.showHealthValues)
 		DrawFlaskValues(out, { mainPanel.position.x + 134, mainPanel.position.y + 28 }, MyPlayer->_pHitPoints >> 6, MyPlayer->_pMaxHP >> 6);
 	if (*sgOptions.Gameplay.showManaValues)

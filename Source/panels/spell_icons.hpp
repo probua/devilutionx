@@ -47,6 +47,8 @@ void DrawLargeSpellIconBorder(const Surface &out, Point position, uint8_t color)
  */
 void DrawSmallSpellIconBorder(const Surface &out, Point position);
 
+void DrawCooldownOverlay(const Surface &out, Point position, float progress, float remainingSeconds);
+
 /**
  * @brief Set the color mapping for the `Draw(Small|Large)SpellIcon(Border)` calls.
  */

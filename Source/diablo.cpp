@@ -112,6 +112,7 @@ bool gbProcessPlayers;
 bool gbLoadGame;
 bool cineflag;
 int PauseMode;
+uint32_t gGameTicks = 0;
 bool gbBard;
 bool gbBarbarian;
 bool HeadlessMode = false;
@@ -1403,6 +1404,7 @@ void GameLogic()
 	if (!ProcessInput()) {
 		return;
 	}
+	gGameTicks++;
 	if (gbProcessPlayers) {
 		gGameLogicStep = GameLogicStep::ProcessPlayers;
 		ProcessPlayers();
