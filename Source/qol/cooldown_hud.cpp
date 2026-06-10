@@ -44,13 +44,15 @@ void DrawCooldownHud(const Surface &out)
 
 	for (int i = 1; i <= static_cast<int>(SpellID::LastDiablo); i++) {
 		SpellID id = static_cast<SpellID>(i);
-		uint16_t cd = GetSpellData(id).sCooldown;
-		if (cd == 0)
+		uint16_t baseCd = GetSpellData(id).sCooldown;
+		if (baseCd == 0)
 			continue;
 
 		uint32_t start = myPlayer.spellCooldownStart[i];
 		if (start == 0)
 			continue;
+
+		uint16_t cd = GetEffectiveCooldown(id, myPlayer.GetSpellLevel(id));
 
 		uint32_t elapsed = now - start;
 		if (elapsed >= cd) {

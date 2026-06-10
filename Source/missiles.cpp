@@ -1807,7 +1807,7 @@ void AddFirebolt(Missile &missile, AddMissileParameter &parameter)
 		switch (missile.sourceType()) {
 		case MissileSource::Player: {
 			const Player &player = *missile.sourcePlayer();
-			missile._midam = GenerateRnd(10) + (player._pMagic / 8) + missile._mispllvl + 1;
+			missile._midam = GenerateRnd(10) + (player._pMagic / 8) + missile._mispllvl * 2 + 1;
 		} break;
 
 		case MissileSource::Monster:

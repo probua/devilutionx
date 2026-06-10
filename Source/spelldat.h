@@ -233,6 +233,7 @@ struct SpellData {
 	uint8_t sStaffMin;
 	uint8_t sStaffMax;
 	uint16_t sCooldown;
+	uint8_t sCooldownReduction;
 
 	[[nodiscard]] MagicType type() const
 	{
@@ -265,6 +266,18 @@ extern const SpellData SpellsData[];
 inline const SpellData &GetSpellData(SpellID spellId)
 {
 	return SpellsData[static_cast<std::underlying_type<SpellID>::type>(spellId)];
+}
+
+inline uint16_t GetEffectiveCooldown(SpellID spellId, int spellLevel)
+{
+	const SpellData &data = GetSpellData(spellId);
+	if (data.sCooldown == 0 || data.sCooldownReduction == 0)
+		return data.sCooldown;
+	int sl = std::max(spellLevel - 1, 0);
+	int multiplier = 100 - data.sCooldownReduction * sl;
+	if (multiplier <= 0)
+		return 0;
+	return static_cast<uint16_t>(data.sCooldown * multiplier / 100);
 }
 
 } // namespace devilution

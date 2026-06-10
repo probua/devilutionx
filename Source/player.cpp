@@ -2341,7 +2341,7 @@ void CreatePlayer(Player &player, HeroClass c)
 	player._pSpellFlags = SpellFlag::None;
 
 	if (player._pClass == HeroClass::Sorcerer) {
-		player._pSplLvl[static_cast<int8_t>(SpellID::Firebolt)] = 2;
+		player._pSplLvl[static_cast<int8_t>(SpellID::Firebolt)] = 1;
 	}
 
 	// Initializing the hotkey bindings to no selection
@@ -3211,7 +3211,7 @@ void CheckPlrSpell(bool isShiftHeld, SpellID spellID, SpellType spellType)
 		return;
 
 	if (IsAnyOf(spellType, SpellType::Spell, SpellType::Charges)) {
-		uint16_t cd = GetSpellData(spellID).sCooldown;
+		uint16_t cd = GetEffectiveCooldown(spellID, myPlayer.GetSpellLevel(spellID));
 		if (cd > 0) {
 			int idx = static_cast<int>(spellID);
 			if (myPlayer.spellCooldownStart[idx] != 0
