@@ -110,6 +110,7 @@ const char *const MsgStrings[] = {
 	N_(/* TRANSLATORS: Shrine Text. Keep atmospheric. :) */ "You feel wiser."),
 	N_(/* TRANSLATORS: Shrine Text. Keep atmospheric. :) */ "You feel refreshed."),
 	N_(/* TRANSLATORS: Shrine Text. Keep atmospheric. :) */ "That which can break will."),
+	N_("You have already mastered this spell"),
 };
 
 void InitDiabloMsg(diablo_message e, uint32_t duration /*= 3500*/)

@@ -17,6 +17,7 @@
 #include "engine/render/clx_render.hpp"
 #include "engine/render/text_render.hpp"
 #include "engine/size.hpp"
+#include "error.h"
 #include "hwcursor.hpp"
 #include "inv_iterators.hpp"
 #include "levels/town.h"
@@ -2057,9 +2058,14 @@ bool UseInvItem(int cii)
 	}
 
 	int idata = ItemCAnimTbl[item->_iCurs];
-	if (item->_iMiscId == IMISC_BOOK)
+	if (item->_iMiscId == IMISC_BOOK) {
+		if (player._pSplLvl[static_cast<int8_t>(item->_iSpell)] >= MaxSpellLevel
+		    && (item->_iSpell != SpellID::Healing || player._pSplLvl[static_cast<int8_t>(SpellID::HealOther)] >= MaxSpellLevel)) {
+			InitDiabloMsg(EMSG_SPELL_MAXED);
+			return true;
+		}
 		PlaySFX(IS_RBOOK);
-	else if (&player == MyPlayer)
+	} else if (&player == MyPlayer)
 		PlaySFX(ItemInvSnds[idata]);
 
 	UseItem(player.getId(), item->_iMiscId, item->_iSpell, cii);

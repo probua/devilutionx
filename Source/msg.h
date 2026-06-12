@@ -336,6 +336,11 @@ enum _cmd_id : uint8_t {
 	// body (TCmdParam1):
 	//    int16_t player_num
 	CMD_HEALOTHER,
+	// Cast heal other spell on target monster (minion).
+	//
+	// body (TCmdParam1):
+	//    int16_t monster_num
+	CMD_HEALOTHERMON,
 	// Chat message.
 	//
 	// body (TCmdString)

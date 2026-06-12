@@ -158,6 +158,7 @@ string_view CmdIdString(_cmd_id cmd)
 	case CMD_DLEVEL_JUNK: return "CMD_DLEVEL_JUNK";
 	case CMD_DLEVEL_END: return "CMD_DLEVEL_END";
 	case CMD_HEALOTHER: return "CMD_HEALOTHER";
+	case CMD_HEALOTHERMON: return "CMD_HEALOTHERMON";
 	case CMD_STRING: return "CMD_STRING";
 	case CMD_FRIENDLYMODE: return "CMD_FRIENDLYMODE";
 	case CMD_SETSTR: return "CMD_SETSTR";
@@ -1689,6 +1690,24 @@ size_t OnHealOther(const TCmd *pCmd, const Player &caster)
 	if (gbBufferMsgs != 1) {
 		if (caster.isOnActiveLevel() && playerIdx < Players.size()) {
 			DoHealOther(caster, Players[playerIdx]);
+		}
+	}
+
+	return sizeof(message);
+}
+
+size_t OnHealOtherMonster(const TCmd *pCmd, size_t pnum)
+{
+	const auto &message = *reinterpret_cast<const TCmdParam1 *>(pCmd);
+	const uint16_t monsterIdx = SDL_SwapLE16(message.wParam1);
+
+	if (gbBufferMsgs != 1) {
+		Player &caster = Players[pnum];
+		if (caster.isOnActiveLevel() && monsterIdx < MaxMonsters) {
+			Monster &monster = Monsters[monsterIdx];
+			if (monster.isPlayerMinion()) {
+				DoHealOther(caster, monster);
+			}
 		}
 	}
 
@@ -3279,6 +3298,8 @@ size_t ParseCmd(size_t pnum, const TCmd *pCmd)
 		return OnResurrect(pCmd, pnum);
 	case CMD_HEALOTHER:
 		return OnHealOther(pCmd, player);
+	case CMD_HEALOTHERMON:
+		return OnHealOtherMonster(pCmd, pnum);
 	case CMD_TALKXY:
 		return OnTalkXY(pCmd, player);
 	case CMD_DEBUG:

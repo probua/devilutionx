@@ -16,6 +16,7 @@
 #include "gamemenu.h"
 #include "inv.h"
 #include "missiles.h"
+#include "monster.h"
 
 namespace devilution {
 
@@ -303,6 +304,31 @@ void DoHealOther(const Player &caster, Player &target)
 	if (&target == MyPlayer) {
 		RedrawComponent(PanelDrawComponent::Health);
 	}
+}
+
+void DoHealOther(const Player &caster, Monster &target)
+{
+	if ((target.hitPoints >> 6) <= 0) {
+		return;
+	}
+
+	int hp = (GenerateRnd(10) + 1) << 6;
+	for (int i = 0; i < caster._pLevel; i++) {
+		hp += (GenerateRnd(4) + 1) << 6;
+	}
+	for (int i = 0; i < caster.GetSpellLevel(SpellID::HealOther); i++) {
+		hp += (GenerateRnd(6) + 1) << 6;
+	}
+
+	if (caster._pClass == HeroClass::Warrior || caster._pClass == HeroClass::Barbarian) {
+		hp *= 2;
+	} else if (caster._pClass == HeroClass::Rogue || caster._pClass == HeroClass::Bard) {
+		hp += hp / 2;
+	} else if (caster._pClass == HeroClass::Monk) {
+		hp *= 3;
+	}
+
+	target.hitPoints = std::min(target.hitPoints + hp, target.maxHitPoints);
 }
 
 int GetSpellBookLevel(SpellID s)

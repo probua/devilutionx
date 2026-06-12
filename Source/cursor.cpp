@@ -556,7 +556,7 @@ void CheckCursMove()
 				pcursmonst = -1;
 				cursPosition = { mx, my };
 			}
-			if (pcursmonst != -1 && Monsters[pcursmonst].isPlayerMinion()) {
+			if (pcursmonst != -1 && Monsters[pcursmonst].isPlayerMinion() && pcurs != CURSOR_HEALOTHER) {
 				pcursmonst = -1;
 			}
 			if (pcursmonst != -1) {
@@ -616,8 +616,13 @@ void CheckCursMove()
 			pcursmonst = -1;
 			cursPosition = { mx, my };
 		}
-		if (pcursmonst != -1 && (Monsters[pcursmonst].isPlayerMinion() || IsAnyOf(pcurs, CURSOR_HEALOTHER, CURSOR_RESURRECT))) {
-			pcursmonst = -1;
+		if (pcursmonst != -1) {
+			if (pcurs == CURSOR_HEALOTHER) {
+				if (!Monsters[pcursmonst].isPlayerMinion())
+					pcursmonst = -1;
+			} else if (Monsters[pcursmonst].isPlayerMinion() || pcurs == CURSOR_RESURRECT) {
+				pcursmonst = -1;
+			}
 		}
 	} else {
 		if (!flipflag && mx + 1 < MAXDUNX && dMonster[mx + 1][my] > 0) {
@@ -765,7 +770,7 @@ void CheckCursMove()
 		pcursitem = -1;
 		cursPosition = { mx, my };
 	}
-	if (pcursmonst != -1 && leveltype != DTYPE_TOWN && Monsters[pcursmonst].isPlayerMinion()) {
+	if (pcursmonst != -1 && leveltype != DTYPE_TOWN && Monsters[pcursmonst].isPlayerMinion() && pcurs != CURSOR_HEALOTHER) {
 		pcursmonst = -1;
 	}
 }

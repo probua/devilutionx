@@ -2009,6 +2009,10 @@ msgstr "Te sientes renovado."
 msgid "That which can break will."
 msgstr "Aquello que puede romper la voluntad."
 
+#: Source/error.cpp:113
+msgid "You have already mastered this spell"
+msgstr "Ya dominas este hechizo"
+
 #: Source/gamemenu.cpp:37
 msgid "Save Game"
 msgstr "Guardar"

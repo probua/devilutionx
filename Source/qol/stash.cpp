@@ -16,6 +16,7 @@
 #include "engine/render/clx_render.hpp"
 #include "engine/render/text_render.hpp"
 #include "engine/size.hpp"
+#include "error.h"
 #include "hwcursor.hpp"
 #include "minitext.h"
 #include "stores.h"
@@ -498,9 +499,14 @@ bool UseStashItem(uint16_t c)
 		return true;
 	}
 
-	if (item->_iMiscId == IMISC_BOOK)
+	if (item->_iMiscId == IMISC_BOOK) {
+		if (MyPlayer->_pSplLvl[static_cast<int8_t>(item->_iSpell)] >= MaxSpellLevel
+		    && (item->_iSpell != SpellID::Healing || MyPlayer->_pSplLvl[static_cast<int8_t>(SpellID::HealOther)] >= MaxSpellLevel)) {
+			InitDiabloMsg(EMSG_SPELL_MAXED);
+			return true;
+		}
 		PlaySFX(IS_RBOOK);
-	else
+	} else
 		PlaySFX(ItemInvSnds[ItemCAnimTbl[item->_iCurs]]);
 
 	UseItem(MyPlayerId, item->_iMiscId, item->_iSpell, -1);

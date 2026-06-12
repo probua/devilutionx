@@ -11,6 +11,8 @@
 
 namespace devilution {
 
+struct Monster;
+
 enum class SpellCheckResult : uint8_t {
 	Success,
 	Fail_NoMana,
@@ -42,6 +44,7 @@ void CastSpell(int id, SpellID spl, int sx, int sy, int dx, int dy, int spllvl);
  */
 void DoResurrect(size_t pnum, Player &target);
 void DoHealOther(const Player &caster, Player &target);
+void DoHealOther(const Player &caster, Monster &target);
 int GetSpellBookLevel(SpellID s);
 int GetSpellStaffLevel(SpellID s);
 

@@ -2011,6 +2011,10 @@ msgstr ""
 msgid "That which can break will."
 msgstr ""
 
+#: Source/error.cpp:113
+msgid "You have already mastered this spell"
+msgstr ""
+
 #: Source/discord/discord.cpp:73
 msgid "Cathedral"
 msgstr ""

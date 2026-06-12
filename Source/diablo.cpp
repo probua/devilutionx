@@ -2488,6 +2488,11 @@ bool TryIconCurs()
 			NewCursor(CURSOR_HAND);
 			return true;
 		}
+		if (pcursmonst != -1 && Monsters[pcursmonst].isPlayerMinion()) {
+			NetSendCmdParam1(true, CMD_HEALOTHERMON, pcursmonst);
+			NewCursor(CURSOR_HAND);
+			return true;
+		}
 
 		return false;
 	}
