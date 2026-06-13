@@ -120,15 +120,18 @@ Los slots `Monsters[0..3]` (golems) y `Monsters[4..7]` (esqueletos) deben estar 
 | SpellID | `Skeleton = 37` |
 | MissileID | `Skeleton = 108` |
 | Nombre | "Raise Skeleton" |
-| Mana cost | 50 |
+| Mana cost | 40 |
 | Tipo | `Magic \| Targeted` |
 | Book level (sBookLvl) | 1 |
 | Staff level (sStaffLvl) | 9 |
 | Inteligencia mínima (minInt) | 40 |
-| Ajuste de mana | 6 |
-| Mana mínimo | 60 |
+| Ajuste de mana | 5 |
+| Mana mínimo | 20 |
 | Staff min | 16 |
 | Staff max | 32 |
+| Cooldown base (sCooldown) | 1200 ticks (60s) |
+| CDR por nivel (sCDR) | 25% |
+| Cooldown efectivo | 60s → 45s → 30s → 15s |
 
 ## IA
 

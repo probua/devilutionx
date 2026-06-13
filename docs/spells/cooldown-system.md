@@ -149,7 +149,7 @@ A velocidad Normal (20 ticks/s), 20 ticks = 1 segundo. Los valores CDR (Cooldown
 | RuneOfNova | 100 | 10 | 5.00s | 4.50s | 4.00s | 3.50s |
 | RuneOfImmolation | 160 | 10 | 8.00s | 7.20s | 6.40s | 5.60s |
 | RuneOfStone | 100 | 10 | 5.00s | 4.50s | 4.00s | 3.50s |
-| Raise Skeleton | 160 | 5 | 8.00s | 7.60s | 7.20s | 6.80s |
+| Raise Skeleton | 1200 | 25 | 60.00s | 45.00s | 30.00s | 15.00s |
 | Golem | 200 | 5 | 10.00s | 9.50s | 9.00s | 8.50s |
 
 Hechizos sin cooldown (`sCooldown = 0`): Null, Identify, Infravision, Resurrect, Etherealize, ItemRepair, StaffRecharge, TrapDisarm, DoomSerpents, BloodRitual, Invisibility, Rage, Mana, Magi, Search.
