@@ -2347,6 +2347,10 @@ void CreatePlayer(Player &player, HeroClass c)
 		player._pMemSpells = GetSpellBitmask(SpellID::Firebolt);
 		player._pRSplType = SpellType::Spell;
 		player._pRSpell = SpellID::Firebolt;
+	} else if (c == HeroClass::Warrior) {
+		player._pMemSpells = GetSpellBitmask(SpellID::Healing) | GetSpellBitmask(SpellID::HealOther);
+	} else if (c == HeroClass::Rogue) {
+		player._pMemSpells = GetSpellBitmask(SpellID::Telekinesis);
 	} else {
 		player._pMemSpells = 0;
 	}
@@ -2359,6 +2363,11 @@ void CreatePlayer(Player &player, HeroClass c)
 
 	if (player._pClass == HeroClass::Sorcerer) {
 		player._pSplLvl[static_cast<int8_t>(SpellID::Firebolt)] = 1;
+	} else if (player._pClass == HeroClass::Warrior) {
+		player._pSplLvl[static_cast<int8_t>(SpellID::Healing)] = 1;
+		player._pSplLvl[static_cast<int8_t>(SpellID::HealOther)] = 1;
+	} else if (player._pClass == HeroClass::Rogue) {
+		player._pSplLvl[static_cast<int8_t>(SpellID::Telekinesis)] = 1;
 	}
 
 	// Initializing the hotkey bindings to no selection

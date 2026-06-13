@@ -230,6 +230,20 @@ La velocidad de casteo = `castingFrames` en `PlayersAnimData[]` (`Source/playerd
 
 El Guerrero se igualó a la Rogue (16 frames). Bard/Barbarian sin cambios (inactivos, `gbIsHellfire=false`).
 
+## Hechizos iniciales por clase
+
+En `CreatePlayer()` (`Source/player.cpp`), cada clase empieza con hechizos conocidos (`_pMemSpells`) y nivel de hechizo (`_pSplLvl`). El hechizo seleccionado por defecto (`_pRSpell`/`_pRSplType`) sigue siendo el skill de clase (ItemRepair/TrapDisarm/StaffRecharge), excepto el Sorcerer que selecciona Firebolt.
+
+| Clase | Skill | Hechizos iniciales (lvl 1) |
+|---|---|---|
+| Warrior | ItemRepair | **Healing** + HealOther (fusión) |
+| Rogue | TrapDisarm | **Telekinesis** |
+| Sorcerer | StaffRecharge | **Firebolt** (vanilla) |
+
+- **Sólo personajes nuevos.** Saves existentes no reciben los hechizos retroactivamente.
+- HealOther se incluye en `_pMemSpells` y `_pSplLvl` para ser consistente con la fusión (al leer un libro de Healing, ambos suben de nivel via `CMD_CHANGE_SPELL_LEVEL`). HealOther está oculto del spellbook layout.
+- Stats verificadas: Warrior baseVit=25 (= req. Healing), Rogue baseDex=30 (= req. Telekinesis). Mana suficiente para castear a lvl 1.
+
 ## Archivos modificados (hechizos)
 
 | Archivo | Cambio |
@@ -249,7 +263,7 @@ El Guerrero se igualó a la Rogue (16 frames). Bard/Barbarian sin cambios (inact
 | `Source/qol/minionstatus.cpp` / `.h` | DrawMinionStatus — HUD centrado con icono + barra HP + debug state para golem/esqueleto |
 | `Source/engine/render/scrollrt.cpp` | Llamada a DrawMinionStatus después de DrawXPBar |
 | `Source/msg.cpp` / `.h` | CMD_AWAKESKELETON, NetSendCmdSkeleton, OnAwakeSkeleton, DeltaSyncSkeleton, OnKillGolem modified, DeltaLoadLevel type check en slots 4-7 |
-| `Source/player.cpp` | RemovePlrMissiles esqueleto cleanup |
+| `Source/player.cpp` | RemovePlrMissiles esqueleto cleanup; `CanUseItem` stat-aware (Vit/Dex); `CreatePlayer` hechizos iniciales Warrior=Healing+HealOther, Rogue=Telekinesis |
 | `Source/diablo.cpp` | InitSkeletons() en load de nivel |
 
 ## Qué falta / pendientes de testing
