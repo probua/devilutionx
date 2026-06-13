@@ -122,7 +122,11 @@ int GetManaAmount(const Player &player, SpellID sn)
 	}
 
 	if (sn == SpellID::Healing || sn == SpellID::HealOther) {
-		ma = (GetSpellData(SpellID::Healing).sManaCost + 2 * player._pLevel - adj);
+		// Percentage-based mana cost: 30% at level 1, -6% per spell level (30/24/18/12)
+		ma = (player._pMaxManaBase >> 6) * std::max(30 - sl * 6, 0) / 100;
+	} else if (sn == SpellID::Telekinesis) {
+		// Percentage-based mana cost: 15% at level 1, tapering to 7% at level 4 (15/12/9/7)
+		ma = (player._pMaxManaBase >> 6) * std::max((45 - sl * 8) / 3, 0) / 100;
 	} else if (GetSpellData(sn).sManaCost == 255) {
 		ma = (player._pMaxManaBase >> 6) - adj;
 	} else {
@@ -132,10 +136,13 @@ int GetManaAmount(const Player &player, SpellID sn)
 	ma = std::max(ma, 0);
 	ma <<= 6;
 
-	if (gbIsHellfire && player._pClass == HeroClass::Sorcerer) {
-		ma /= 2;
-	} else if (player._pClass == HeroClass::Rogue || player._pClass == HeroClass::Monk || player._pClass == HeroClass::Bard) {
-		ma -= ma / 4;
+	// Percentage-based spells skip class modifiers (the % already scales with class)
+	if (sn != SpellID::Healing && sn != SpellID::HealOther && sn != SpellID::Telekinesis) {
+		if (gbIsHellfire && player._pClass == HeroClass::Sorcerer) {
+			ma /= 2;
+		} else if (player._pClass == HeroClass::Rogue || player._pClass == HeroClass::Monk || player._pClass == HeroClass::Bard) {
+			ma -= ma / 4;
+		}
 	}
 
 	if (GetSpellData(sn).sMinMana > ma >> 6) {

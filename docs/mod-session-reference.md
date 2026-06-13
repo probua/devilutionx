@@ -186,12 +186,36 @@ Forzadas a QUEST_NOTAVAIL en InitQuests().
 | SpellID | Mana base | sBookLvl | sStaffLvl | minInt | Stat requisito | sManaAdj | sMinMana |
 |---|---|---|---|---|---|---|---|
 | Firebolt | 6 | 1 | 1 | 15 | Magia | 1 | 3 |
-| ChargedBolt | 6 | 1 | 1 | 25 | Magia | 1 | 6 |
-| HolyBolt | 7 | 1 | 1 | 20 | Magia | 1 | 3 |
-| Healing | 5 | 1 | 1 | 25 | **Vitality** | 3 | 1 |
-| Telekinesis | 15 | 1 | 2 | 30 | **Dexterity** | 2 | 8 |
-| Raise Skeleton | 50 | 1 | 9 | 40 | Magia | 6 | 60 |
+| ChargedBolt | 7 | 1 | 1 | 25 | Magia | 1 | 4 |
+| HolyBolt | 5 | 1 | 1 | 20 | Magia | 1 | 3 |
+| Healing | **% mana** | 1 | 1 | 25 | **Vitality** | 3 | 1 |
+| Telekinesis | **% mana** | 1 | 2 | 30 | **Dexterity** | 2 | 2 |
+| Raise Skeleton | 40 | 1 | 9 | 40 | Magia | 5 | 20 |
 | Golem | 100 | 6 | 9 | 81 | Magia | 6 | 60 |
+
+### Costos efectivos por nivel de hechizo (flat)
+
+| Hechizo | Lvl 1 | Lvl 2 | Lvl 3 | Lvl 4 (max) |
+|---|---|---|---|---|
+| Firebolt | 6 | 5 | 4 | 3 |
+| ChargedBolt | 7 | 6 | 5 | 4 |
+| HolyBolt | 5 | 4 | 3 | 3 |
+| Raise Skeleton | 40 | 35 | 30 | 25 |
+
+## Costo de mana porcentual (Healing, Telekinesis)
+
+Healing/HealOther y Telekinesis consumen un **porcentaje del mana máximo** en vez de una cantidad fija. Esto escala con cualquier nivel/clase y evita que el hechizo sea trivial a niveles altos.
+
+- **Implementación:** `GetManaAmount()` (`Source/spells.cpp`) — casos especiales para estos hechizos, usan `_pMaxManaBase` para calcular el porcentaje.
+- **Sin modificadores de clase:** el % ya escala naturalmente (Sorcerer tiene más mana → más mana absoluto). Se saltan los modificadores de Rogue/Monk/Bard (-25%) y Sorcerer Hellfire (-50%).
+- **`sMinMana`** sigue como floor mínimo.
+
+| Hechizo | Spell lvl 1 | lvl 2 | lvl 3 | lvl 4 (max) | Fórmula |
+|---|---|---|---|---|---|
+| Healing/HealOther | **30%** | 24% | 18% | **12%** | `30 - sl*6` |
+| Telekinesis | **15%** | 12% | 9% | **7%** | `(45 - sl*8) / 3` |
+
+**Casts aprox. desde mana lleno:** Healing 3→4→5→8, Telekinesis 6→8→11→14.
 
 ## Requisitos de hechizo por stat alternativo (Vitality / Dexterity)
 
@@ -250,7 +274,8 @@ En `CreatePlayer()` (`Source/player.cpp`), cada clase empieza con hechizos conoc
 |---|---|
 | `Source/player.h` | `MaxSpellLevel = 4` |
 | `Source/spelldat.h` | `Skeleton=37`, `LastDiablo=Skeleton`, `MAX_SPELLS=53`, `MissileID::Skeleton=108` |
-| `Source/spelldat.cpp` | Datos de Raise Skeleton, Golem/Skeleton a Magic, sBookLvl de todos ajustados |
+| `Source/spelldat.cpp` | Datos de Raise Skeleton, Golem/Skeleton a Magic, sBookLvl ajustados, minInt req (Healing 25 Vit, Telekinesis 30 Dex), mana costs: ChargedBolt 6→7/floor 6→4, HolyBolt 7→5, Raise Skeleton 50→40/adj 6→5/floor 60→20, Telekinesis sMinMana 8→2 |
+| `Source/spells.cpp` | `GetManaAmount`: Healing/HealOther/Telekinesis con costo porcentual del mana máximo (sin modificadores de clase) |
 | `Source/items.cpp` | GetBookSpell/GetStaffSpell (maxSpells fix), GetBookSpell/GetStaffSpell siempre saltan HealOther, Healing book sube HealOther |
 | `Source/itemdat.cpp` | iMinMLvl de BOOK2/BOOK3/BOOK4 reducidos |
 | `Source/panels/spell_book.cpp` | Layout página 0 y 1 (Skeleton, Telekinesis, Null, Inferno) |
