@@ -1,11 +1,11 @@
 # Mod: Experience System Changes
 
-## 1. Experience Multiplier (x10)
+## 1. Experience Multiplier (x4)
 
 **File:** `Source/player.cpp`
 **Location:** Constant `ExperienceMultiplier` defined above the `AddPlrExperience` function.
 
-- Added a `constexpr int ExperienceMultiplier = 10` constant that multiplies all experience gained.
+- Added a `constexpr int ExperienceMultiplier = 4` constant that multiplies all experience gained.
 - Applies to both single-player and multiplayer.
 - To change the multiplier, update the value of `ExperienceMultiplier` and recompile.
 

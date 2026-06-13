@@ -2,7 +2,7 @@
 
 ## Resumen del proyecto
 
-Mod de Diablo 1 usando devilutionX. Reduce la mazmorra de 16 a 7 niveles, XP x10, XP compartida. Distribución 2+2+1+2 (Cathedral+Catacombs+Caves+Hell).
+Mod de Diablo 1 usando devilutionX. Reduce la mazmorra de 16 a 7 niveles, XP x4, XP compartida. Distribución 2+2+1+2 (Cathedral+Catacombs+Caves+Hell).
 
 ## Distribución de niveles
 
@@ -27,7 +27,7 @@ GetVirtualLevel() en Source/levels/gendung.h
 
 - `NUMLEVELS` = 25 (sin cambio, seguridad Hellfire)
 - `giNumberOfLevels` = 8 (7 niveles + town)
-- `ExperienceMultiplier` = 10 (en player.cpp)
+- `ExperienceMultiplier` = 4 (en player.cpp, era x10, reducido por balance)
 - Diablo original only, no Hellfire
 
 ## Archivos principales modificados
@@ -53,7 +53,7 @@ GetVirtualLevel() en Source/levels/gendung.h
 | `Source/levels/drlg_l4.cpp` | 11 checks: Lazarus lvl 6, Diablo lvl 7, PlaceStairs reestructurado, pentagrama+town warp en lvl 6 |
 | `Source/levels/themes.cpp` | 3 checks currlevel==16 → 7 |
 | `Source/missiles.cpp` | 15 damage formulas + minhit con GetVirtualLevel() |
-| `Source/player.cpp` | XP x10, shared XP (gbActivePlayers), voice dialogs (1/3/5/6/7), trap disarm |
+| `Source/player.cpp` | XP x4, shared XP (gbActivePlayers), voice dialogs (1/3/5/6/7), trap disarm |
 | `Source/stores.cpp` | Shop level mapping con GetVirtualLevelForShop() |
 | `Source/control.cpp` | `glSeedTbl[7]` |
 
@@ -273,7 +273,7 @@ En `CreatePlayer()` (`Source/player.cpp`), cada clase empieza con hechizos conoc
 - Verificar Leoric set level en MP
 - Verificar que items generados en nivel 6-7 tengan poder adecuado
 - Verificar estabilidad de todos los niveles en MP cooperativo (2+ jugadores)
-- Balance general: ¿7 niveles con x10 XP es demasiado rápido?
+- Balance general: evaluar si x4 XP se siente bien en juego (curva estimada: Lv7→11→14→17→20→24→26)
 - Rebalancear fórmulas para `MaxSpellLevel=4` (ScaleSpellEffect, daños, summons, mana cost, Mana Shield, duraciones)
 - Probar Raise Skeleton end-to-end (spawn, IA, cleanup, MP sync)
 - Probar Raise Skeleton en set levels (Leoric Chamber, Lazarus Lair)

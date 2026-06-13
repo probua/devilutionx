@@ -2465,7 +2465,7 @@ void NextPlrLevel(Player &player)
 	CalcPlrInv(player, true);
 }
 
-constexpr int ExperienceMultiplier = 10;
+constexpr int ExperienceMultiplier = 4;
 
 void AddPlrExperience(Player &player, int lvl, int exp)
 {

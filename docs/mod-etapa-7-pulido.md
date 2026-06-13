@@ -163,7 +163,7 @@ Nota: `SpawnBoy()` y `SpawnPremium()` usan `_pLevel` (nivel del personaje), no e
 
 ### Problema
 
-El `ExperienceMultiplier` (x10) se aplicaba antes del cap anti-power-leveling de multiplayer. El cap limita la XP por kill al mínimo de:
+El `ExperienceMultiplier` (originalmente x10, ahora x4) se aplicaba antes del cap anti-power-leveling de multiplayer. El cap limita la XP por kill al mínimo de:
 
 1. La XP calculada (con multiplier)
 2. `ExpLvlsTbl[nivel] / 20` — 1/20 de la XP necesaria para el nivel actual
@@ -192,4 +192,4 @@ if (gbIsMultiplayer)
 clampedExp = exp * 10 * levelScaling;  // multiplier aplica después
 ```
 
-El cap anti-power-leveling ahora se aplica sobre la XP base (sin multiplier), preservando la intención original del límite (prevenir power-leveling con XP base excesiva) mientras el multiplier x10 funciona correctamente en ambos modos.
+El cap anti-power-leveling ahora se aplica sobre la XP base (sin multiplier), preservando la intención original del límite (prevenir power-leveling con XP base excesiva) mientras el multiplier funciona correctamente en ambos modos. (El multiplier era x10 al momento de este fix; posteriormente se redujo a x4 por balance.)

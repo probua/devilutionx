@@ -50,7 +50,7 @@ Definidas en `Source/levels/gendung.h`:
 |---|---|---|
 | `NUMLEVELS` | 25 | Sin cambio (seguridad para buffers de Hellfire) |
 | `giNumberOfLevels` | 8 | Era 17 (Diablo) o 25 (Hellfire). 7 niveles + town = 8 |
-| `ExperienceMultiplier` | 10 | En `player.cpp`, multiplica toda la XP ganada |
+| `ExperienceMultiplier` | 4 | En `player.cpp`, multiplica toda la XP ganada. Era x10, reducido a x4 por balance |
 
 ## Quests activas (7)
 
@@ -102,7 +102,7 @@ Eliminadas via `QUEST_NOTAVAIL` forzado en `InitQuests()`.
 | `Source/levels/drlg_l4.cpp` | 6 | Lazarus, Diablo, PlaceStairs reestructurado |
 | `Source/levels/themes.cpp` | 6 | Theme rooms exclusion nivel 7 |
 | `Source/missiles.cpp` | 7 | Daño trampas, minhit, Fire Wall |
-| `Source/player.cpp` | 7 | XP x10, shared XP, voice dialogs, trap disarm |
+| `Source/player.cpp` | 7 | XP x4, shared XP, voice dialogs, trap disarm |
 | `Source/stores.cpp` | 7 | Shop level mapping |
 | `Source/spelldat.h` / `.cpp` | Spells | `Skeleton=37`, spell tier data, `MAX_SPELLS=53` |
 | `Source/panels/spell_book.cpp` | Spells | Layout páginas 0-1 (Skeleton, Telekinesis, Null, Inferno) |
@@ -211,6 +211,13 @@ Implementado en `DrawMinionStatus()` en `Source/qol/minionstatus.cpp`, llamado d
 - **Causa:** El cap se aplicaba después del `ExperienceMultiplier`, limitando la XP efectiva a mucho menos de x10
 - **Fix:** Se reestructuró `AddPlrExperience()` para que el cap se aplique sobre la XP base (antes del multiplier), y el multiplier aplique después
 - **Detalle:** Ver `mod-etapa-7-pulido.md` sección "Bug fix: Cap anti-power-leveling"
+- **Nota:** El multiplier era x10 en ese momento; posteriormente se redujo a x4 por balance
+
+### 2026-06-13: XP multiplier reducido de x10 a x4
+
+- **Cambio:** `ExperienceMultiplier` 10 → 4 en `Source/player.cpp`
+- **Motivo:** Con x10 el jugador sobre-leveleaba el contenido (nivel 9 tras el primer nivel, +6 sobre los monstruos). x4 mantiene desafío: nivel ~7 tras nivel 1, curva más equilibrada contra el nivel de monstruos
+- **Niveles finales estimados:** x10→Lv29, x4→Lv26 (con ~90 monstruos matados por nivel)
 
 ### 2025-05-24: Object graphics crash (nivel 3+)
 
