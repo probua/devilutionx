@@ -503,6 +503,7 @@ void CalcSelfItems(Player &player)
 	int sa = 0;
 	int ma = 0;
 	int da = 0;
+	int va = 0;
 
 	// first iteration is used for collecting stat bonuses from items
 	for (Item &equipment : EquippedPlayerItemsRange(player)) {
@@ -511,6 +512,7 @@ void CalcSelfItems(Player &player)
 			sa += equipment._iPLStr;
 			ma += equipment._iPLMag;
 			da += equipment._iPLDex;
+			va += equipment._iPLVit;
 		}
 	}
 
@@ -520,6 +522,7 @@ void CalcSelfItems(Player &player)
 		const int currstr = std::max(0, sa + player._pBaseStr);
 		const int currmag = std::max(0, ma + player._pBaseMag);
 		const int currdex = std::max(0, da + player._pBaseDex);
+		const int currvit = std::max(0, va + player._pBaseVit);
 
 		changeflag = false;
 		// Iterate over equipped items and remove stat bonuses if they are not valid
@@ -529,10 +532,28 @@ void CalcSelfItems(Player &player)
 
 			bool isValid = IsItemValid(equipment);
 
-			if (currstr < equipment._iMinStr
-			    || currmag < equipment._iMinMag
-			    || currdex < equipment._iMinDex)
+			if (currstr < equipment._iMinStr || currdex < equipment._iMinDex)
 				isValid = false;
+
+			// For staves the _iMinMag value may gate a non-Magic attribute
+			// (e.g. Healing requires Vitality, Telekinesis requires Dexterity).
+			if (isValid && equipment._iMinMag != 0) {
+				int reqStat = currmag;
+				if (equipment._itype == ItemType::Staff) {
+					switch (GetSpellRequirementStat(equipment._iSpell)) {
+					case SpellRequirementStat::Vitality:
+						reqStat = currvit;
+						break;
+					case SpellRequirementStat::Dexterity:
+						reqStat = currdex;
+						break;
+					default:
+						break;
+					}
+				}
+				if (reqStat < equipment._iMinMag)
+					isValid = false;
+			}
 
 			if (isValid)
 				continue;
@@ -543,6 +564,7 @@ void CalcSelfItems(Player &player)
 				sa -= equipment._iPLStr;
 				ma -= equipment._iPLMag;
 				da -= equipment._iPLDex;
+				va -= equipment._iPLVit;
 			}
 		}
 	} while (changeflag);
@@ -1916,8 +1938,23 @@ void PrintItemInfo(const Item &item)
 		std::string text = std::string(_("Required:"));
 		if (str != 0)
 			text.append(fmt::format(fmt::runtime(_(" {:d} Str")), str));
-		if (mag != 0)
-			text.append(fmt::format(fmt::runtime(_(" {:d} Mag")), mag));
+		if (mag != 0) {
+			// Spell books/staves may require Vitality or Dexterity instead of Magic.
+			string_view magLabel = _("Mag");
+			if (item._iMiscId == IMISC_BOOK || item._itype == ItemType::Staff) {
+				switch (GetSpellRequirementStat(item._iSpell)) {
+				case SpellRequirementStat::Vitality:
+					magLabel = _("Vit");
+					break;
+				case SpellRequirementStat::Dexterity:
+					magLabel = _("Dex");
+					break;
+				default:
+					break;
+				}
+			}
+			text.append(fmt::format(fmt::runtime(_(" {:d} {}")), mag, magLabel));
+		}
 		if (dex != 0)
 			text.append(fmt::format(fmt::runtime(_(" {:d} Dex")), dex));
 		AddPanelString(text);
@@ -2001,9 +2038,11 @@ void SpawnOnePremium(Item &premiumItem, int plvl, const Player &player)
 	int strength = std::max(player.GetMaximumAttributeValue(CharacterAttribute::Strength), player._pStrength);
 	int dexterity = std::max(player.GetMaximumAttributeValue(CharacterAttribute::Dexterity), player._pDexterity);
 	int magic = std::max(player.GetMaximumAttributeValue(CharacterAttribute::Magic), player._pMagic);
+	int vitality = std::max(player.GetMaximumAttributeValue(CharacterAttribute::Vitality), player._pVitality);
 	strength += strength / 5;
 	dexterity += dexterity / 5;
 	magic += magic / 5;
+	vitality += vitality / 5;
 
 	plvl = clamp(plvl, 1, 30);
 
@@ -2055,9 +2094,23 @@ void SpawnOnePremium(Item &premiumItem, int plvl, const Player &player)
 				break;
 			}
 			itemValue = itemValue * 4 / 5; // avoids forced int > float > int conversion
+			// For staves the _iMinMag value may gate a non-Magic attribute.
+			int magicForReq = magic;
+			if (premiumItem._itype == ItemType::Staff) {
+				switch (GetSpellRequirementStat(premiumItem._iSpell)) {
+				case SpellRequirementStat::Vitality:
+					magicForReq = vitality;
+					break;
+				case SpellRequirementStat::Dexterity:
+					magicForReq = dexterity;
+					break;
+				default:
+					break;
+				}
+			}
 			if (premiumItem._iIvalue <= MaxVendorValueHf
 			    && premiumItem._iMinStr <= strength
-			    && premiumItem._iMinMag <= magic
+			    && premiumItem._iMinMag <= magicForReq
 			    && premiumItem._iMinDex <= dexterity
 			    && premiumItem._iIvalue >= itemValue) {
 				break;

@@ -217,6 +217,14 @@ enum class SpellDataFlags : uint8_t {
 };
 use_enum_as_flags(SpellDataFlags);
 
+// Which character attribute a spell's `minInt` requirement is checked against.
+// Most spells use Magic; some may require Vitality or Dexterity instead.
+enum class SpellRequirementStat : uint8_t {
+	Magic,
+	Vitality,
+	Dexterity,
+};
+
 struct SpellData {
 	const char *sNameText;
 	_sfx_id sSFX;
@@ -267,6 +275,10 @@ inline const SpellData &GetSpellData(SpellID spellId)
 {
 	return SpellsData[static_cast<std::underlying_type<SpellID>::type>(spellId)];
 }
+
+// Returns which character attribute the spell's requirement (minInt) is measured
+// against. Books and staves use this to decide which stat gates the item.
+SpellRequirementStat GetSpellRequirementStat(SpellID spellId);
 
 inline uint16_t GetEffectiveCooldown(SpellID spellId, int spellLevel)
 {

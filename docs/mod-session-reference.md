@@ -183,15 +183,41 @@ Forzadas a QUEST_NOTAVAIL en InitQuests().
 
 ## Datos de hechizos página 0
 
-| SpellID | Mana base | sBookLvl | sStaffLvl | minInt | sManaAdj | sMinMana |
-|---|---|---|---|---|---|---|
-| Firebolt | 6 | 1 | 1 | 15 | 1 | 3 |
-| ChargedBolt | 6 | 1 | 1 | 25 | 1 | 6 |
-| HolyBolt | 7 | 1 | 1 | 20 | 1 | 3 |
-| Healing | 5 | 1 | 1 | 17 | 3 | 1 |
-| Telekinesis | 15 | 1 | 2 | 33 | 2 | 8 |
-| Raise Skeleton | 50 | 1 | 9 | 40 | 6 | 60 |
-| Golem | 100 | 6 | 9 | 81 | 6 | 60 |
+| SpellID | Mana base | sBookLvl | sStaffLvl | minInt | Stat requisito | sManaAdj | sMinMana |
+|---|---|---|---|---|---|---|---|
+| Firebolt | 6 | 1 | 1 | 15 | Magia | 1 | 3 |
+| ChargedBolt | 6 | 1 | 1 | 25 | Magia | 1 | 6 |
+| HolyBolt | 7 | 1 | 1 | 20 | Magia | 1 | 3 |
+| Healing | 5 | 1 | 1 | 25 | **Vitality** | 3 | 1 |
+| Telekinesis | 15 | 1 | 2 | 30 | **Dexterity** | 2 | 8 |
+| Raise Skeleton | 50 | 1 | 9 | 40 | Magia | 6 | 60 |
+| Golem | 100 | 6 | 9 | 81 | Magia | 6 | 60 |
+
+## Requisitos de hechizo por stat alternativo (Vitality / Dexterity)
+
+Algunos hechizos exigen un stat distinto a Magia para aprender/usar (libros y báculos). El **valor** del requisito sigue en `SpellData::minInt` (y por tanto en `Item::_iMinMag`, que se persiste y escala +20%/nivel sin cambios); lo que cambia es **contra qué stat se compara** ese valor.
+
+- **`SpellRequirementStat GetSpellRequirementStat(SpellID)`** (`Source/spelldat.h` / `spelldat.cpp`): enum `{ Magic, Vitality, Dexterity }`. Default `Magic`; `Healing`/`HealOther → Vitality`, `Telekinesis → Dexterity`.
+- **`Player::CanUseItem`** (`Source/player.cpp`): para `IMISC_BOOK` y `ItemType::Staff`, compara `_iMinMag` contra el stat indicado por el helper.
+- **`CalcSelfItems`** (`Source/items.cpp`): añade tracking de vitalidad (`_iPLVit` + `_pBaseVit`) y check stat-aware (relevante para báculos equipados).
+- **`SpawnOnePremium`** (`Source/items.cpp`): añade vitalidad y check stat-aware en el filtro Hellfire.
+- **Display** (`Source/items.cpp:PrintItemInfo`, `Source/stores.cpp`): reetiqueta "Mag" → "Vit"/"Dex" en libros/báculos.
+- **Sin cambios:** generación de items, escalado +20%/nivel, save/load (no se añade campo al formato de guardado).
+- **Scrolls** siguen sin requisito de stat. El escalado +20%/nivel se mantiene (p.ej. Healing lvl2 → 30 Vit).
+
+Para añadir más hechizos con requisito alterno: agregar el `case` en `GetSpellRequirementStat()` y ajustar el `minInt` en `spelldat.cpp`.
+
+## Velocidad de casteo por clase
+
+La velocidad de casteo = `castingFrames` en `PlayersAnimData[]` (`Source/playerdat.cpp`), con `ticksPerFrame=1`. Menos frames = más rápido.
+
+| Clase | castingFrames | castingActionFrame | ~Tiempo (20 fps) |
+|---|---|---|---|
+| Warrior | 16 | 12 | 0.8s (antes 20/1.0s) |
+| Rogue | 16 | 12 | 0.8s |
+| Sorcerer | 12 | 8 | 0.6s |
+
+El Guerrero se igualó a la Rogue (16 frames). Bard/Barbarian sin cambios (inactivos, `gbIsHellfire=false`).
 
 ## Archivos modificados (hechizos)
 

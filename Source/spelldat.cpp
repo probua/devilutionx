@@ -22,7 +22,7 @@ const SpellData SpellsData[] = {
 // id                           sNameText,                         sSFX,      bookCost10,  staffCost10,  sManaCost, flags,                  sBookLvl,  sStaffLvl,  minInt, { sMissiles[2]                                         }   sManaAdj,  sMinMana,  sStaffMin,  sStaffMax, sCooldown sCDR
 /*SpellID::Null*/             { nullptr,                           SFX_NONE,           0,            0,          0, Fire,                          0,          0,       0, { MissileID::Null,                 MissileID::Null,    },         0,         0,         40,         80,      0,   0 },
 /*SpellID::Firebolt*/         { P_("spell", "Firebolt"),           IS_CAST2,         100,            5,          6, Fire | Targeted,               1,          1,      15, { MissileID::Firebolt,             MissileID::Null,    },         1,         3,         40,         80,     20,  20 },
-/*SpellID::Healing*/          { P_("spell", "Healing"),            IS_CAST8,         100,            5,          5, Magic | AllowedInTown,         1,          1,      17, { MissileID::Healing,              MissileID::Null,    },         3,         1,         20,         40,     60,  10 },
+/*SpellID::Healing*/          { P_("spell", "Healing"),            IS_CAST8,         100,            5,          5, Magic | AllowedInTown,         1,          1,      25, { MissileID::Healing,              MissileID::Null,    },         3,         1,         20,         40,     60,  10 },
 /*SpellID::Lightning*/        { P_("spell", "Lightning"),          IS_CAST4,         300,           15,         10, Lightning | Targeted,          3,          3,      20, { MissileID::LightningControl,     MissileID::Null,    },         1,         6,         20,         60,     40,  15 },
 /*SpellID::Flash*/            { P_("spell", "Flash"),              IS_CAST4,         750,           50,         30, Lightning,                     3,          4,      33, { MissileID::FlashBottom,          MissileID::FlashTop },         2,        16,         20,         40,     60,  15 },
 /*SpellID::Identify*/         { P_("spell", "Identify"),           IS_CAST6,           0,           10,         13, Magic | AllowedInTown,        -1,         -1,      23, { MissileID::Identify,             MissileID::Null,    },         2,         1,          8,         12,      0,   0 },
@@ -53,7 +53,7 @@ const SpellData SpellsData[] = {
 /*SpellID::ChargedBolt*/      { P_("spell", "Charged Bolt"),       IS_CAST2,         100,            5,          6, Lightning | Targeted,          1,          1,      25, { MissileID::ChargedBolt,          MissileID::Null,    },         1,         6,         40,         80,     30,  20 },
 /*SpellID::HolyBolt*/         { P_("spell", "Holy Bolt"),          IS_CAST2,         100,            5,          7, Magic | Targeted,              1,          1,      20, { MissileID::HolyBolt,             MissileID::Null,    },         1,         3,         40,         80,     30,  20 },
 /*SpellID::Resurrect*/        { P_("spell", "Resurrect"),          IS_CAST8,         400,           25,         20, Magic | AllowedInTown,        -1,          5,      30, { MissileID::Resurrect,            MissileID::Null,    },         0,        20,          4,         10,      0,   0 },
-/*SpellID::Telekinesis*/      { P_("spell", "Telekinesis"),        IS_CAST2,         250,           20,         15, Magic,                         1,          2,      33, { MissileID::Telekinesis,          MissileID::Null,    },         2,         8,         20,         40,    100,  15 },
+/*SpellID::Telekinesis*/      { P_("spell", "Telekinesis"),        IS_CAST2,         250,           20,         15, Magic,                         1,          2,      30, { MissileID::Telekinesis,          MissileID::Null,    },         2,         8,         20,         40,    100,  15 },
 /*SpellID::HealOther*/        { P_("spell", "Heal Other"),         IS_CAST8,         100,            5,          5, Magic | AllowedInTown,         1,          1,      17, { MissileID::HealOther,            MissileID::Null,    },         3,         1,         20,         40,     60,  10 },
 /*SpellID::BloodStar*/        { P_("spell", "Blood Star"),         IS_CAST2,        2750,          180,         25, Magic,                         6,         13,      70, { MissileID::BloodStar,            MissileID::Null,    },         2,        14,         20,         60,     60,  15 },
 /*SpellID::BoneSpirit*/       { P_("spell", "Bone Spirit"),        IS_CAST2,        1150,           80,         24, Magic,                         6,          7,      34, { MissileID::BoneSpirit,           MissileID::Null,    },         1,        12,         20,         60,    100,  10 },
@@ -75,5 +75,18 @@ const SpellData SpellsData[] = {
 /*SpellID::RuneOfStone*/      { P_("spell", "Rune of Stone"),      IS_CAST8,         800,           30,        255, Magic | Targeted,             -1,         -1,      48, { MissileID::RuneOfStone,          MissileID::Null,    },         1,        10,         40,         80,    100,  10 },
 	// clang-format on
 };
+
+SpellRequirementStat GetSpellRequirementStat(SpellID spellId)
+{
+	switch (spellId) {
+	case SpellID::Healing:
+	case SpellID::HealOther:
+		return SpellRequirementStat::Vitality;
+	case SpellID::Telekinesis:
+		return SpellRequirementStat::Dexterity;
+	default:
+		return SpellRequirementStat::Magic;
+	}
+}
 
 } // namespace devilution

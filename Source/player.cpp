@@ -1622,9 +1622,26 @@ bool Player::CanUseItem(const Item &item) const
 	if (!IsItemValid(item))
 		return false;
 
-	return _pStrength >= item._iMinStr
-	    && _pMagic >= item._iMinMag
-	    && _pDexterity >= item._iMinDex;
+	if (_pStrength < item._iMinStr)
+		return false;
+	if (_pDexterity < item._iMinDex)
+		return false;
+
+	// For spell books and staves the _iMinMag value may gate a different
+	// attribute (e.g. Healing requires Vitality, Telekinesis requires Dexterity).
+	if (item._iMinMag != 0
+	    && (item._iMiscId == IMISC_BOOK || item._itype == ItemType::Staff)) {
+		switch (GetSpellRequirementStat(item._iSpell)) {
+		case SpellRequirementStat::Vitality:
+			return _pVitality >= item._iMinMag;
+		case SpellRequirementStat::Dexterity:
+			return _pDexterity >= item._iMinMag;
+		default:
+			break;
+		}
+	}
+
+	return _pMagic >= item._iMinMag;
 }
 
 void Player::RemoveInvItem(int iv, bool calcScrolls)

@@ -326,8 +326,23 @@ void PrintStoreItem(const Item &item, int l, UiFlags flags, bool cursIndent = fa
 		AppendStrView(productLine, _("Required:"));
 		if (str != 0)
 			productLine.append(fmt::format(fmt::runtime(_(" {:d} Str")), str));
-		if (mag != 0)
-			productLine.append(fmt::format(fmt::runtime(_(" {:d} Mag")), mag));
+		if (mag != 0) {
+			// Spell books/staves may require Vitality or Dexterity instead of Magic.
+			string_view magLabel = _("Mag");
+			if (item._iMiscId == IMISC_BOOK || item._itype == ItemType::Staff) {
+				switch (GetSpellRequirementStat(item._iSpell)) {
+				case SpellRequirementStat::Vitality:
+					magLabel = _("Vit");
+					break;
+				case SpellRequirementStat::Dexterity:
+					magLabel = _("Dex");
+					break;
+				default:
+					break;
+				}
+			}
+			productLine.append(fmt::format(fmt::runtime(_(" {:d} {}")), mag, magLabel));
+		}
 		if (dex != 0)
 			productLine.append(fmt::format(fmt::runtime(_(" {:d} Dex")), dex));
 	}
