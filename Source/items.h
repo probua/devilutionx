@@ -543,6 +543,9 @@ bool DoOil(Player &player, int cii);
 void DrawUniqueInfo(const Surface &out);
 void PrintItemDetails(const Item &item);
 void PrintItemDur(const Item &item);
+// True when `item` is a spell book whose spell is already at MaxSpellLevel for
+// `player` (Healing counts as maxed only when HealOther is also maxed).
+bool IsSpellBookMaxed(const Item &item, const Player &player);
 void UseItem(size_t pnum, item_misc_id Mid, SpellID spellID, int spellFrom);
 bool UseItemOpensHive(const Item &item, Point position);
 bool UseItemOpensGrave(const Item &item, Point position);

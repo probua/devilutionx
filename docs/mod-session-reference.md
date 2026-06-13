@@ -207,6 +207,17 @@ Algunos hechizos exigen un stat distinto a Magia para aprender/usar (libros y b�
 
 Para añadir más hechizos con requisito alterno: agregar el `case` en `GetSpellRequirementStat()` y ajustar el `minInt` en `spelldat.cpp`.
 
+## Libros de hechizo en nivel máximo (mastered)
+
+Cuando un libro pertenece a un hechizo ya en `MaxSpellLevel` (4), el tooltip **no** muestra el requisito del "siguiente nivel" (que sería inalcanzable). En su lugar muestra el mismo mensaje que al click derecho: *"You have already mastered this spell"* (`EMSG_SPELL_MAXED`). Además el nombre del libro no se muestra en rojo.
+
+- **`IsSpellBookMaxed(const Item&, const Player&)`** (declarado en `Source/items.h`, definido en `Source/items.cpp`): espejo del guard de click derecho (`inv.cpp`/`stash.cpp`). Verifica `_pSplLvl[spell] >= MaxSpellLevel`; para Healing también requiere HealOther al máximo (fusión).
+- **`PrintItemMisc`** (`Source/items.cpp`): si el libro está maximizado, muestra el mensaje "mastered" en vez de "Right-click to read".
+- **`PrintItemInfo`** (`Source/items.cpp`): si está maximizado, omite la línea "Required: …".
+- **`updateRequiredStatsCacheForPlayer`** (`Source/items.cpp`): si está maximizado, setea `_iStatFlag = true` (color normal) y no escala `_iMinMag`.
+- **Tienda de Adria** (`Source/stores.cpp`): `PrintStoreItem` muestra el mensaje "mastered" para libros maximizados (compra y venta), y `StartWitchBuy` fuerza `_iStatFlag = true` (color normal).
+- Cubre inventario, stash y tienda de Adria.
+
 ## Velocidad de casteo por clase
 
 La velocidad de casteo = `castingFrames` en `PlayersAnimData[]` (`Source/playerdat.cpp`), con `ticksPerFrame=1`. Menos frames = más rápido.

@@ -1897,6 +1897,10 @@ void printItemMiscGamepad(const Item &item, bool isOil, bool isCastOnTarget)
 
 void PrintItemMisc(const Item &item)
 {
+	if (item._iMiscId == IMISC_BOOK && MyPlayer != nullptr && IsSpellBookMaxed(item, *MyPlayer)) {
+		AddPanelString(_("You have already mastered this spell"));
+		return;
+	}
 	if (item._iMiscId == IMISC_EAR) {
 		AddPanelString(fmt::format(fmt::runtime(pgettext("player", "Level: {:d}")), item._ivalue));
 		return;
@@ -1931,6 +1935,9 @@ void PrintItemMisc(const Item &item)
 void PrintItemInfo(const Item &item)
 {
 	PrintItemMisc(item);
+	// A maxed spell book shows the "mastered" message instead of requirements.
+	if (item._iMiscId == IMISC_BOOK && MyPlayer != nullptr && IsSpellBookMaxed(item, *MyPlayer))
+		return;
 	uint8_t str = item._iMinStr;
 	uint8_t dex = item._iMinDex;
 	uint8_t mag = item._iMinMag;
@@ -2495,6 +2502,21 @@ std::string GetTranslatedItemNameMagical(const Item &item, bool hellfireItem, bo
 }
 
 } // namespace
+
+// True when `item` is a spell book whose spell is already at MaxSpellLevel for
+// `player` (mirrors the right-click guard in inv.cpp/stash.cpp). The Healing/
+// HealOther merge means a Healing book is only maxed when both are maxed.
+bool IsSpellBookMaxed(const Item &item, const Player &player)
+{
+	if (item._iMiscId != IMISC_BOOK)
+		return false;
+	if (player._pSplLvl[static_cast<int8_t>(item._iSpell)] < MaxSpellLevel)
+		return false;
+	if (item._iSpell == SpellID::Healing
+	    && player._pSplLvl[static_cast<int8_t>(SpellID::HealOther)] < MaxSpellLevel)
+		return false;
+	return true;
+}
 
 bool IsItemAvailable(int i)
 {
@@ -4850,6 +4872,12 @@ void Item::setNewAnimation(bool showAnimation)
 void Item::updateRequiredStatsCacheForPlayer(const Player &player)
 {
 	if (_itype == ItemType::Misc && _iMiscId == IMISC_BOOK) {
+		if (IsSpellBookMaxed(*this, player)) {
+			// Spell already at max level: the tooltip shows "mastered" and the
+			// book can't be read further, so don't render its name in red.
+			_iStatFlag = true;
+			return;
+		}
 		_iMinMag = GetSpellData(_iSpell).minInt;
 		int8_t spellLevel = player._pSplLvl[static_cast<int8_t>(_iSpell)];
 		while (spellLevel != 0) {

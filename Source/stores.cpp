@@ -320,7 +320,9 @@ void PrintStoreItem(const Item &item, int l, UiFlags flags, bool cursIndent = fa
 	uint8_t mag = item._iMinMag;
 	int8_t dex = item._iMinDex;
 
-	if (str == 0 && mag == 0 && dex == 0) {
+	if (item._iMiscId == IMISC_BOOK && IsSpellBookMaxed(item, *MyPlayer)) {
+		AppendStrView(productLine, _("You have already mastered this spell"));
+	} else if (str == 0 && mag == 0 && dex == 0) {
 		AppendStrView(productLine, _("No required attributes"));
 	} else {
 		AppendStrView(productLine, _("Required:"));
@@ -783,7 +785,8 @@ void StartWitchBuy()
 			continue;
 
 		WitchBookLevel(item);
-		item._iStatFlag = MyPlayer->CanUseItem(item);
+		// A maxed book can't be read further; don't show its name in red.
+		item._iStatFlag = IsSpellBookMaxed(item, *MyPlayer) || MyPlayer->CanUseItem(item);
 		storenumh++;
 	}
 	stextsmax = std::max(storenumh - 4, 0);
