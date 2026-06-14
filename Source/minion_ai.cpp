@@ -216,8 +216,8 @@ void SpawnSkeleton(Player &player, Monster &skeleton, Point position, Missile &m
 	skeleton.hitPoints = skeleton.maxHitPoints;
 	skeleton.armorClass = 25;
 	skeleton.golemToHit = 5 * (missile._mispllvl + 8) + 2 * player._pLevel;
-	skeleton.minDamage = 2 * (missile._mispllvl + 4);
-	skeleton.maxDamage = 2 * (missile._mispllvl + 8);
+	skeleton.minDamage = missile._mispllvl;
+	skeleton.maxDamage = 2 * missile._mispllvl + 2;
 	skeleton.flags |= MFLAG_GOLEM;
 	skeleton.ai = MonsterAIID::Golem;
 	skeleton.activeForTicks = UINT8_MAX;

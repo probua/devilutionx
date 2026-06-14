@@ -88,10 +88,21 @@ Los slots `Monsters[0..3]` (golems) y `Monsters[4..7]` (esqueletos) deben estar 
 |---|---|---|---|
 | HP (Mana=200) | 2560 + 2×mana/3 | 9600 + 2×mana/3 | **−73%** |
 | ToHit | 60 + 2×playerLevel | 115 + 2×playerLevel | **−48%** |
-| Daño min | 16 | 38 | **−58%** |
-| Daño max | 24 | 46 | **−48%** |
+| Daño min | 4 | 38 | **−89%** |
+| Daño max | 10 | 46 | **−78%** |
 
 (Todos los demás hechizos también se ven afectados — ver `docs/spells/spell-tiers.md`.)
+
+## Balance — rol de escudo (sesión 2025-06-13)
+
+El esqueleto está diseñado como **tanque de apoyo**, no como DPS. En nivel 1 hace chip damage (1-4) que no one-shotkea monstruos de Cathedral (2-6 HP), pero tiene HP alto para absorber golpes y distraer enemigos.
+
+| Spell lvl | Daño min | Daño max | HP aprox (50 mana) |
+|---|---|---|---|
+| 1 | 1 | 4 | ~43 |
+| 2 | 2 | 6 | ~53 |
+| 3 | 3 | 8 | ~63 |
+| 4 | 4 | 10 | ~73 |
 
 ## Stats del esqueleto
 
@@ -99,8 +110,8 @@ Los slots `Monsters[0..3]` (golems) y `Monsters[4..7]` (esqueletos) deben estar 
 |---|---|
 | HP | `2 × (320 × spellLvl + player._pMaxMana / 3)` |
 | ToHit | `5 × (spellLvl + 8) + 2 × player._pLevel` |
-| Daño mínimo | `2 × (spellLvl + 4)` |
-| Daño máximo | `2 × (spellLvl + 8)` |
+| Daño mínimo | `spellLvl` |
+| Daño máximo | `2 × spellLvl + 2` |
 | Armor Class | 25 |
 | Mana cost | 50 |
 
