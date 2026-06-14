@@ -1526,6 +1526,7 @@ bool MonsterDelay(Monster &monster)
 
 	if (monster.var2-- == 0) {
 		int oFrame = monster.animInfo.currentFrame;
+		monster.flags &= ~MFLAG_STUNNED;
 		M_StartStand(monster, monster.direction);
 		monster.animInfo.currentFrame = oFrame;
 		return true;
@@ -4602,8 +4603,6 @@ bool Monster::isImmune(MissileID missileType, DamageType missileElement) const
 	    || ((resistance & IMMUNE_FIRE) != 0 && missileElement == DamageType::Fire)
 	    || ((resistance & IMMUNE_LIGHTNING) != 0 && missileElement == DamageType::Lightning)
 	    || ((resistance & IMMUNE_ACID) != 0 && missileElement == DamageType::Acid))
-		return true;
-	if (missileType == MissileID::HolyBolt && type().type != MT_DIABLO && data().monsterClass != MonsterClass::Undead)
 		return true;
 	return false;
 }

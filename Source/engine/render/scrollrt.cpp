@@ -40,6 +40,7 @@
 #include "qol/cooldown_hud.h"
 #include "qol/monhealthbar.h"
 #include "qol/stash.h"
+#include "qol/stun_indicator.h"
 #include "qol/xpbar.h"
 #include "stores.h"
 #include "towners.h"
@@ -1236,6 +1237,7 @@ void DrawView(const Surface &out, Point startPosition)
 	DrawItemNameLabels(out);
 	DrawMonsterHealthBar(out);
 	DrawFloatingNumbers(out, startPosition, offset);
+	DrawStunIndicators(out, startPosition, offset);
 
 	if (stextflag != TalkID::None && !qtextflag)
 		DrawSText(out);

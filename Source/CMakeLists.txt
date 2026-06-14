@@ -150,6 +150,7 @@ set(libdevilutionx_SRCS
   qol/cooldown_hud.cpp
   qol/monhealthbar.cpp
   qol/stash.cpp
+  qol/stun_indicator.cpp
   qol/xpbar.cpp
 
   storm/storm_net.cpp

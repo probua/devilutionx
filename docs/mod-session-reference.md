@@ -140,9 +140,32 @@ Forzadas a QUEST_NOTAVAIL en InitQuests().
 
 - Agregado al spellbook (página 0, slot 5, donde antes estaba HealOther)
 - Knockback multi-tile (loop de 2 `M_GetKnockback`)
-- Stun ~1 segundo vía `MonsterMode::Delay` con var2=30
+- Stun: 30 ticks normales, 15 para bosses/únicos (50% reduction)
+- Limpieza de `dMonster` si el monstruo estaba caminando (`isWalking()`)
+- Usa `MFLAG_STUNNED` + `MonsterMode::Delay` (sistema compartido con Holy Bolt)
 - No causa daño, no escala por nivel de hechizo
 - Docs: `docs/spells/telekinesis-rework.md`
+
+### Holy Bolt — rework: golpea a todos, daña solo undead, aturde
+
+- `isImmune()` sin filtro undead → el proyectil impacta contra cualquier monstruo
+- **No-undead:** stun sin daño (early return en `MonsterMHit`)
+- **Undead:** daño normal + stun si sobrevive
+- Duración stun: 15/20/25/30 ticks (lvl 1-4), bosses 50%
+- Limpieza de `dMonster` con `isWalking()` (fix del bug de sprite duplicado)
+- Indicador visual compartido con Telekinesis (`MFLAG_STUNNED`)
+- Docs: `docs/spells/holybolt-rework.md`
+
+### Indicador visual de stun — estrellas orbitando
+
+- **3 estrellas de 5 puntas** girando sobre la cabeza del monstruo stunned
+- Órbita elíptica isométrica (eje vertical × 0.5)
+- Estrella de 5 puntas: 23 píxeles, array estático de offsets (`StarPixels[]`)
+- Transparencia checkerboard: píxeles pares sólidos, impares `SetHalfTransparentPixel` (~75% opacidad)
+- Rotación FPS-independiente vía `gGameTicks` (20Hz)
+- Zoom mode: radio y tamaño ×2
+- Hook: `DrawView()` en `scrollrt.cpp` después de `DrawFloatingNumbers`
+- Archivos: `Source/qol/stun_indicator.h` / `.cpp`, `Source/CMakeLists.txt`
 
 ### Raise Skeleton — nuevo hechizo
 
@@ -290,6 +313,12 @@ En `CreatePlayer()` (`Source/player.cpp`), cada clase empieza con hechizos conoc
 | `Source/msg.cpp` / `.h` | CMD_AWAKESKELETON, NetSendCmdSkeleton, OnAwakeSkeleton, DeltaSyncSkeleton, OnKillGolem modified, DeltaLoadLevel type check en slots 4-7 |
 | `Source/player.cpp` | RemovePlrMissiles esqueleto cleanup; `CanUseItem` stat-aware (Vit/Dex); `CreatePlayer` hechizos iniciales Warrior=Healing+HealOther, Rogue=Telekinesis |
 | `Source/diablo.cpp` | InitSkeletons() en load de nivel |
+| `Source/monster.h` | `MFLAG_STUNNED = 1 << 3` |
+| `Source/monster.cpp` | `isImmune()` sin filtro undead HolyBolt; `MonsterDelay()` limpia `MFLAG_STUNNED` |
+| `Source/missiles.cpp` | `MonsterMHit`: HolyBolt no-undead stun-only + undead daño+stun; dMonster cleanup con `isWalking()` |
+| `Source/msg.cpp` | `OnKnockback`: dMonster cleanup, boss reduction stun, `MFLAG_STUNNED` |
+| `Source/qol/stun_indicator.cpp` / `.h` | Nuevo — indicador visual de estrellas orbitando |
+| `Source/engine/render/scrollrt.cpp` | Hook `DrawStunIndicators` en `DrawView` |
 
 ## Qué falta / pendientes de testing
 

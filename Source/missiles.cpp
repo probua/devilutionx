@@ -236,6 +236,31 @@ bool MonsterMHit(int pnum, int monsterId, int mindam, int maxdam, int dist, Miss
 			return false;
 	}
 
+	if (t == MissileID::HolyBolt && monster.data().monsterClass != MonsterClass::Undead) {
+		monster.tag(player);
+		PlayEffect(monster, MonsterSound::Hit);
+		if (monster.mode != MonsterMode::Petrified) {
+			if (monster.isWalking()) {
+				M_ClearSquares(monster);
+				monster.position.tile = monster.position.old;
+				monster.position.future = monster.position.old;
+				dMonster[monster.position.tile.x][monster.position.tile.y] = monster.getId() + 1;
+			}
+			int spllvl = std::max(1, player.GetSpellLevel(SpellID::HolyBolt));
+			int stunDuration = 15 + (spllvl - 1) * 5;
+			if (monster.isUnique())
+				stunDuration /= 2;
+			monster.var2 = stunDuration;
+			monster.mode = MonsterMode::Delay;
+			monster.flags |= MFLAG_STUNNED;
+		}
+		if (monster.activeForTicks == 0) {
+			monster.activeForTicks = UINT8_MAX;
+			monster.position.last = player.position.tile;
+		}
+		return true;
+	}
+
 	int dam;
 	if (t == MissileID::BoneSpirit) {
 		dam = monster.hitPoints / 3 >> 6;
@@ -271,6 +296,22 @@ bool MonsterMHit(int pnum, int monsterId, int mindam, int maxdam, int dist, Miss
 			M_GetKnockback(monster);
 		if (monster.type().type != MT_GOLEM)
 			M_StartHit(monster, player, dam);
+	}
+
+	if (t == MissileID::HolyBolt && (monster.hitPoints >> 6) > 0 && monster.mode != MonsterMode::Petrified) {
+		if (monster.isWalking()) {
+			M_ClearSquares(monster);
+			monster.position.tile = monster.position.old;
+			monster.position.future = monster.position.old;
+			dMonster[monster.position.tile.x][monster.position.tile.y] = monster.getId() + 1;
+		}
+		int spllvl = std::max(1, player.GetSpellLevel(SpellID::HolyBolt));
+		int stunDuration = 15 + (spllvl - 1) * 5;
+		if (monster.isUnique())
+			stunDuration /= 2;
+		monster.var2 = stunDuration;
+		monster.mode = MonsterMode::Delay;
+		monster.flags |= MFLAG_STUNNED;
 	}
 
 	if (monster.activeForTicks == 0) {

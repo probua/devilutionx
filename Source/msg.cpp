@@ -1659,8 +1659,16 @@ size_t OnKnockback(const TCmd *pCmd, size_t pnum)
 				break;
 		}
 		M_StartHit(monster, player, 0);
-		monster.var2 = 30;
+		if (monster.isWalking()) {
+			M_ClearSquares(monster);
+			monster.position.tile = monster.position.old;
+			monster.position.future = monster.position.old;
+			dMonster[monster.position.tile.x][monster.position.tile.y] = monster.getId() + 1;
+		}
+		int stunDuration = monster.isUnique() ? 15 : 30;
+		monster.var2 = stunDuration;
 		monster.mode = MonsterMode::Delay;
+		monster.flags |= MFLAG_STUNNED;
 	}
 
 	return sizeof(message);
