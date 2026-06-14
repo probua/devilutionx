@@ -212,7 +212,7 @@ void SpawnSkeleton(Player &player, Monster &skeleton, Point position, Missile &m
 	skeleton.position.future = position;
 	skeleton.position.old = position;
 	skeleton.pathCount = 0;
-	skeleton.maxHitPoints = 2 * (320 * missile._mispllvl + player._pMaxMana / 3);
+	skeleton.maxHitPoints = (8 * missile._mispllvl + 3 * player._pLevel + 15) << 6;
 	skeleton.hitPoints = skeleton.maxHitPoints;
 	skeleton.armorClass = 25;
 	skeleton.golemToHit = 5 * (missile._mispllvl + 8) + 2 * player._pLevel;

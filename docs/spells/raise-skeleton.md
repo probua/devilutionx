@@ -84,31 +84,33 @@ Los slots `Monsters[0..3]` (golems) y `Monsters[4..7]` (esqueletos) deben estar 
 - Afecta a Raise Skeleton: `spellLvl` máximo del esqueleto es ahora 4 en vez de 15.
 - Impacto en stats del esqueleto a nivel máximo:
 
-| Stat | sl=4 (nuevo max) | sl=15 (anterior max) | Reducción |
-|---|---|---|---|
-| HP (Mana=200) | 2560 + 2×mana/3 | 9600 + 2×mana/3 | **−73%** |
-| ToHit | 60 + 2×playerLevel | 115 + 2×playerLevel | **−48%** |
-| Daño min | 4 | 38 | **−89%** |
-| Daño max | 10 | 46 | **−78%** |
+| Stat | sl=4 (nuevo max) | sl=15 (anterior max) |
+|---|---|---|
+| HP (pLvl=20) | 107 | 173 (mana 200) |
+| ToHit | 60 + 2×playerLevel | 115 + 2×playerLevel |
+| Daño min | 4 | 38 |
+| Daño max | 10 | 46 |
 
 (Todos los demás hechizos también se ven afectados — ver `docs/spells/spell-tiers.md`.)
 
 ## Balance — rol de escudo (sesión 2025-06-13)
 
-El esqueleto está diseñado como **tanque de apoyo**, no como DPS. En nivel 1 hace chip damage (1-4) que no one-shotkea monstruos de Cathedral (2-6 HP), pero tiene HP alto para absorber golpes y distraer enemigos.
+El esqueleto está diseñado como **tanque de apoyo**, no como DPS. En nivel 1 hace chip damage (1-4) que no one-shotkea monstruos de Cathedral (2-6 HP), pero tiene HP suficiente para absorber golpes y distraer enemigos.
 
-| Spell lvl | Daño min | Daño max | HP aprox (50 mana) |
-|---|---|---|---|
-| 1 | 1 | 4 | ~43 |
-| 2 | 2 | 6 | ~53 |
-| 3 | 3 | 8 | ~63 |
-| 4 | 4 | 10 | ~73 |
+| Spell lvl | Daño min | Daño max | HP (pLvl 5) | HP (pLvl 20) |
+|---|---|---|---|---|
+| 1 | 1 | 4 | 38 | 83 |
+| 2 | 2 | 6 | 46 | 91 |
+| 3 | 3 | 8 | 54 | 99 |
+| 4 | 4 | 10 | 62 | 107 |
+
+HP ya no escala con mana — usa spell level + player level para dar valores predecibles y balanceados (~40 HP al enfrentar al Butcher al final del nivel 1).
 
 ## Stats del esqueleto
 
 | Stat | Fórmula |
 |---|---|
-| HP | `2 × (320 × spellLvl + player._pMaxMana / 3)` |
+| HP | `(8 × spellLvl + 3 × player._pLevel + 15) << 6` |
 | ToHit | `5 × (spellLvl + 8) + 2 × player._pLevel` |
 | Daño mínimo | `spellLvl` |
 | Daño máximo | `2 × spellLvl + 2` |
