@@ -1650,7 +1650,7 @@ size_t OnKnockback(const TCmd *pCmd, size_t pnum)
 
 	if (gbBufferMsgs != 1 && player.isOnActiveLevel() && monsterIdx < MaxMonsters) {
 		Monster &monster = Monsters[monsterIdx];
-		for (int i = 0; i < 2; i++) {
+		for (int i = 0; i < 3; i++) {
 			if (monster.mode == MonsterMode::Petrified)
 				break;
 			Point oldPos = monster.position.old;
